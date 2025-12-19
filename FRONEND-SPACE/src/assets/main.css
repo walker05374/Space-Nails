@@ -4,26 +4,114 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Poppins', sans-serif;
-  background-color: #F8FAFC;
-  color: #0F172A;
-  -webkit-font-smoothing: antialiased;
+/* --- VARIÁVEIS DE CORES (THEMING) --- */
+:root {
+  /* Modo Normal (Cores Originais) */
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #9CA3AF; /* gray-400 */
+  --color-brand: #DB2777;    /* Pink */
+  --color-border: #E5E7EB;   /* gray-200 */
 }
 
-/* --- CLASSE PADRÃO DE BOTÃO (Baseado no Login) --- */
+/* Modo Alto Contraste (Cores Acessíveis) */
+.high-contrast {
+  --bg-page: #000000;
+  --bg-card: #000000;
+  --text-primary: #FFFF00;   /* Amarelo Vivo */
+  --text-secondary: #FFFFFF; /* Branco */
+  --color-brand: #00FFFF;    /* Ciano */
+  --color-border: #FFFFFF;   /* Bordas Brancas */
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- AJUSTES GLOBAIS PARA ALTO CONTRASTE --- */
+.high-contrast .bg-white {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--color-border); /* Adiciona borda para visibilidade */
+}
+
+.high-contrast .text-gray-400,
+.high-contrast .text-gray-500,
+.high-contrast .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.high-contrast .text-\[\#0F172A\] {
+  color: var(--text-primary) !important;
+}
+
+.high-contrast .bg-\[\#F8FAFC\] {
+  background-color: var(--bg-page) !important;
+}
+
+/* --- CLASSE PADRÃO DE BOTÃO --- */
 .btn-primary {
-  @apply w-full py-4 rounded-2xl font-bold text-sm shadow-lg shadow-pink-500/30 flex justify-center items-center gap-2 bg-[#DB2777] text-white hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider;
+  @apply w-full py-4 rounded-2xl font-bold text-sm shadow-lg flex justify-center items-center gap-2 text-white hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider;
+  
+  background-color: var(--color-brand);
+  color: var(--bg-page) !important; /* Texto do botão contrasta com a cor */
+}
+
+/* No alto contraste, o botão ganha borda amarela/ciano */
+.high-contrast .btn-primary {
+  border: 2px solid var(--text-primary);
+  background-color: var(--color-brand) !important;
+  color: #000000 !important;
+  font-weight: 900;
 }
 
 .btn-secondary {
-  @apply w-full py-4 rounded-2xl font-bold text-sm border-2 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 transition-all uppercase tracking-wider;
+  @apply w-full py-4 rounded-2xl font-bold text-sm border-2 transition-all uppercase tracking-wider;
+  
+  border-color: var(--color-border);
+  color: var(--text-secondary);
+}
+
+.high-contrast .btn-secondary {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background-color: transparent;
 }
 
 .btn-danger {
   @apply w-full py-4 rounded-2xl font-bold text-sm bg-red-50 text-red-500 hover:bg-red-100 transition-all uppercase tracking-wider;
 }
 
+.high-contrast .btn-danger {
+  background-color: #000000 !important;
+  color: #FF0000 !important;
+  border: 2px solid #FF0000;
+}
+
 .input-modern {
-  @apply w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-pink-500/50 focus:ring-2 focus:ring-pink-500/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium text-sm;
+  @apply w-full px-4 py-3 rounded-xl border outline-none transition-all font-medium text-sm;
+  
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: transparent;
+}
+
+.input-modern:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 2px rgba(219, 39, 119, 0.2);
+}
+
+.high-contrast .input-modern {
+  border: 2px solid var(--text-secondary);
+  background-color: #000000;
+  color: #FFFFFF;
+}
+
+.high-contrast .input-modern:focus {
+  border-color: var(--color-brand);
+  background-color: #1a1a1a;
 }

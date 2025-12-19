@@ -4,12 +4,17 @@ import api from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
 
 const auth = useAuthStore();
-const hojeStr = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'long' });
+const hojeStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 // --- ESTADOS ---
-const abaPrincipal = ref('dashboard'); // 'dashboard' | 'clientes' | 'servicos'
-const abaAgenda = ref('hoje'); // 'hoje' | 'amanha' | 'semana'
-const filtroGrafico = ref('7d'); // '7d' | '15d' | '30d'
+const abaPrincipal = ref('dashboard'); // 'dashboard' | 'agendamentos' | 'clientes' | 'servicos'
+
+// DATAS PARA O GRÁFICO (Padrão: Últimos 7 dias)
+const dataInicioGrafico = ref(new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]);
+const dataFimGrafico = ref(new Date().toISOString().split('T')[0]);
+
+// DATA PARA A LISTA DE AGENDAMENTOS (Padrão: Hoje)
+const dataFiltroAgenda = ref(new Date().toISOString().split('T')[0]);
 
 const carregando = ref(true);
 const modalAgendaOpen = ref(false);
@@ -22,7 +27,7 @@ const servicos = ref([]);
 
 // Filtros de Cliente
 const termoBuscaCliente = ref('');
-const ordemCliente = ref('az'); // 'az' | 'recentes'
+const ordemCliente = ref('az'); 
 
 // --- FORMS ---
 const novoAgendamento = ref({
@@ -65,98 +70,88 @@ async function carregarDados() {
   }
 }
 
-// --- LÓGICA DO DASHBOARD E FINANCEIRO ---
-
-// 1. Totais Financeiros
-const financeiro = computed(() => {
+// --- LÓGICA DO DASHBOARD (FINANCEIRO DE HOJE) ---
+const financeiroHoje = computed(() => {
+  const hojeISO = new Date().toISOString().split('T')[0];
   let recebido = 0;
-  let previsao = 0;
+  let aReceber = 0;
   
   agendamentos.value.forEach(a => {
-    if (a.status === 'CONCLUIDO') {
-      recebido += a.valorServico;
-    } else if (a.status === 'PENDENTE' || a.status === 'CONFIRMADO') {
-      previsao += a.valorServico;
+    if (a.dataHora.startsWith(hojeISO)) {
+      if (a.status === 'CONCLUIDO') {
+        recebido += a.valorServico;
+      } else if (a.status === 'PENDENTE' || a.status === 'CONFIRMADO') {
+        aReceber += a.valorServico;
+      }
     }
   });
 
-  return { recebido, previsao, total: recebido + previsao };
+  return { recebido, aReceber, total: recebido + aReceber };
 });
 
-// 2. Dados para o Gráfico (Barras)
+// --- LÓGICA DO GRÁFICO (PERÍODO PERSONALIZADO) ---
 const dadosGrafico = computed(() => {
-  const dias = filtroGrafico.value === '7d' ? 7 : filtroGrafico.value === '15d' ? 15 : 30;
-  const hoje = new Date();
-  const dados = [];
-  
-  // Cria array com os últimos X dias
-  for (let i = dias - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(hoje.getDate() - i);
-    const dataStr = d.toISOString().split('T')[0];
-    
-    // Soma o faturamento (CONCLUIDO) daquele dia
-    const totalDia = agendamentos.value
-      .filter(a => a.dataHora.startsWith(dataStr) && a.status === 'CONCLUIDO')
-      .reduce((acc, curr) => acc + curr.valorServico, 0);
-      
-    dados.push({
-      dia: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      valor: totalDia,
-      percentual: 0 // Será calculado abaixo
-    });
-  }
+  if (!dataInicioGrafico.value || !dataFimGrafico.value) return [];
 
+  // Filtra agendamentos CONCLUÍDOS dentro do período selecionado
+  const itensNoPeriodo = agendamentos.value.filter(a => {
+    const dataItem = a.dataHora.split('T')[0];
+    return a.status === 'CONCLUIDO' && dataItem >= dataInicioGrafico.value && dataItem <= dataFimGrafico.value;
+  });
+
+  // Agrupa por dia
+  const mapaDias = {};
+  itensNoPeriodo.forEach(a => {
+    const dia = a.dataHora.split('T')[0]; 
+    const diaFormatado = new Date(a.dataHora).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    
+    if (!mapaDias[dia]) {
+      mapaDias[dia] = { dia: diaFormatado, valor: 0, rawDate: dia };
+    }
+    mapaDias[dia].valor += a.valorServico;
+  });
+
+  // Ordena e formata para o gráfico
+  const dados = Object.values(mapaDias).sort((a, b) => a.rawDate.localeCompare(b.rawDate));
+  
   // Normaliza altura das barras (0 a 100%)
-  const maiorValor = Math.max(...dados.map(d => d.valor), 1); // Evita divisão por zero
+  const maiorValor = Math.max(...dados.map(d => d.valor), 1);
   dados.forEach(d => d.percentual = (d.valor / maiorValor) * 100);
 
   return dados;
 });
 
-// --- LÓGICA DA AGENDA INTELIGENTE ---
-const agendaFiltrada = computed(() => {
-  const hoje = new Date().toISOString().split('T')[0];
-  const amanhaDate = new Date();
-  amanhaDate.setDate(new Date().getDate() + 1);
-  const amanha = amanhaDate.toISOString().split('T')[0];
-
-  let lista = [];
-
-  if (abaAgenda.value === 'hoje') {
-    lista = agendamentos.value.filter(a => a.dataHora.startsWith(hoje));
-  } else if (abaAgenda.value === 'amanha') {
-    lista = agendamentos.value.filter(a => a.dataHora.startsWith(amanha));
-  } else if (abaAgenda.value === 'semana') {
-    // Pega tudo do futuro (excluindo hoje e amanhã para não duplicar visualmente, ou mostra tudo)
-    lista = agendamentos.value.filter(a => a.dataHora > amanha).sort((a,b) => new Date(a.dataHora) - new Date(b.dataHora));
-  }
-  
-  // Ordena por hora
-  return lista.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+const totalPeriodoGrafico = computed(() => {
+  return dadosGrafico.value.reduce((acc, curr) => acc + curr.valor, 0);
 });
 
-// --- LÓGICA DE CLIENTES (BUSCA E ORDENAÇÃO) ---
+// --- LÓGICA DA ABA AGENDAMENTOS (PENDENTES vs CONCLUÍDOS) ---
+const agendaDoDia = computed(() => {
+  // Filtra pela data selecionada na aba de Agendamentos
+  return agendamentos.value.filter(a => a.dataHora.startsWith(dataFiltroAgenda.value));
+});
+
+const listaPendentes = computed(() => {
+  return agendaDoDia.value
+    .filter(a => a.status === 'PENDENTE' || a.status === 'CONFIRMADO')
+    .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+});
+
+const listaConcluidos = computed(() => {
+  return agendaDoDia.value
+    .filter(a => a.status === 'CONCLUIDO')
+    .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+});
+
+// --- LÓGICA DE CLIENTES ---
 const clientesFiltrados = computed(() => {
   let lista = [...clientes.value];
-
-  // 1. Filtro de Busca
   if (termoBuscaCliente.value) {
     const termo = termoBuscaCliente.value.toLowerCase();
-    lista = lista.filter(c => 
-      c.nome.toLowerCase().includes(termo) || 
-      c.telefone.includes(termo)
-    );
+    lista = lista.filter(c => c.nome.toLowerCase().includes(termo) || c.telefone.includes(termo));
   }
-
-  // 2. Ordenação
-  if (ordemCliente.value === 'az') {
-    lista.sort((a, b) => a.nome.localeCompare(b.nome));
-  } else if (ordemCliente.value === 'recentes') {
-    // Como não temos data de criação, usamos o ID (maior ID = mais recente)
-    lista.sort((a, b) => b.id - a.id);
-  }
-
+  if (ordemCliente.value === 'az') lista.sort((a, b) => a.nome.localeCompare(b.nome));
+  else if (ordemCliente.value === 'recentes') lista.sort((a, b) => b.id - a.id);
   return lista;
 });
 
@@ -230,7 +225,6 @@ async function atualizarStatus(id, status) {
 
 function adicionarServicoLista() {
   if(!novoServico.value.nome || !novoServico.value.valor) return;
-  // Idealmente, salvar no backend aqui
   servicos.value.push({ id: Date.now(), nome: novoServico.value.nome, valor: parseFloat(novoServico.value.valor) });
   novoServico.value = { nome: '', valor: '' };
   modalServicoOpen.value = false;
@@ -249,7 +243,7 @@ function formatarMoeda(valor) {
     <header class="bg-white sticky top-0 z-30 shadow-sm px-6 py-4 flex justify-between items-center">
       <div>
         <h1 class="text-xl font-bold text-[#0F172A]">Studio<span class="text-[#DB2777]">.Nails</span></h1>
-        <p class="text-xs font-medium text-gray-400 uppercase">{{ hojeStr }}</p>
+        <p class="text-xs font-medium text-gray-400 capitalize">{{ hojeStr }}</p>
       </div>
       <div class="flex items-center gap-3">
         <span class="text-sm font-bold text-[#0F172A] hidden md:block">{{ auth.user?.nome }}</span>
@@ -259,10 +253,11 @@ function formatarMoeda(valor) {
 
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
       
-      <div class="bg-white p-1.5 rounded-2xl shadow-sm inline-flex w-full md:w-auto border border-gray-100 mb-2">
-        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 rounded-xl text-sm font-bold transition-all', abaPrincipal === 'dashboard' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Dashboard</button>
-        <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 rounded-xl text-sm font-bold transition-all', abaPrincipal === 'clientes' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
-        <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 rounded-xl text-sm font-bold transition-all', abaPrincipal === 'servicos' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
+      <div class="bg-white p-1.5 rounded-2xl shadow-sm inline-flex w-full md:w-auto border border-gray-100 mb-2 overflow-x-auto">
+        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Dashboard</button>
+        <button @click="abaPrincipal = 'agendamentos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'agendamentos' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Agendamentos</button>
+        <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'clientes' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
+        <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'servicos' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
       </div>
 
       <div v-if="abaPrincipal === 'dashboard'" class="space-y-6 animate-fade-in">
@@ -270,34 +265,47 @@ function formatarMoeda(valor) {
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-16 h-16 bg-green-50 rounded-bl-full -mr-2 -mt-2"></div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Recebido (Concluídos)</p>
-            <p class="text-2xl font-bold text-green-600 mt-1 relative z-10">{{ formatarMoeda(financeiro.recebido) }}</p>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Recebido (Hoje)</p>
+            <p class="text-2xl font-bold text-green-600 mt-1 relative z-10">{{ formatarMoeda(financeiroHoje.recebido) }}</p>
           </div>
 
           <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-50 rounded-bl-full -mr-2 -mt-2"></div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">A Receber (Agendado)</p>
-            <p class="text-2xl font-bold text-yellow-600 mt-1 relative z-10">{{ formatarMoeda(financeiro.previsao) }}</p>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">A Receber (Hoje)</p>
+            <p class="text-2xl font-bold text-yellow-600 mt-1 relative z-10">{{ formatarMoeda(financeiroHoje.aReceber) }}</p>
           </div>
 
           <div class="bg-[#0F172A] p-5 rounded-3xl shadow-lg col-span-2 md:col-span-1 text-white relative overflow-hidden">
             <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-[#DB2777] rounded-full opacity-20 blur-xl"></div>
-            <p class="text-xs font-bold text-gray-300 uppercase tracking-wider">Potencial Total</p>
-            <p class="text-2xl font-bold mt-1">{{ formatarMoeda(financeiro.total) }}</p>
+            <p class="text-xs font-bold text-gray-300 uppercase tracking-wider">Total (Hoje)</p>
+            <p class="text-2xl font-bold mt-1">{{ formatarMoeda(financeiroHoje.total) }}</p>
           </div>
         </div>
 
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="font-bold text-[#0F172A]">Rendimento Real</h2>
-            <div class="flex bg-gray-50 rounded-lg p-1">
-              <button @click="filtroGrafico = '7d'" :class="['px-3 py-1 rounded-md text-xs font-bold transition-all', filtroGrafico === '7d' ? 'bg-white shadow text-[#DB2777]' : 'text-gray-400']">7D</button>
-              <button @click="filtroGrafico = '15d'" :class="['px-3 py-1 rounded-md text-xs font-bold transition-all', filtroGrafico === '15d' ? 'bg-white shadow text-[#DB2777]' : 'text-gray-400']">15D</button>
-              <button @click="filtroGrafico = '30d'" :class="['px-3 py-1 rounded-md text-xs font-bold transition-all', filtroGrafico === '30d' ? 'bg-white shadow text-[#DB2777]' : 'text-gray-400']">Mês</button>
+          <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div>
+              <h2 class="font-bold text-[#0F172A]">Rendimento por Período</h2>
+              <p class="text-xs text-gray-400">Total no período: <span class="text-[#DB2777] font-bold">{{ formatarMoeda(totalPeriodoGrafico) }}</span></p>
+            </div>
+            
+            <div class="flex gap-2 bg-gray-50 p-2 rounded-xl">
+               <div>
+                  <label class="text-[10px] font-bold text-gray-400 uppercase px-1">Início</label>
+                  <input type="date" v-model="dataInicioGrafico" class="bg-white border-none rounded-lg p-1 text-xs font-bold text-gray-600 outline-none">
+               </div>
+               <div>
+                  <label class="text-[10px] font-bold text-gray-400 uppercase px-1">Fim</label>
+                  <input type="date" v-model="dataFimGrafico" class="bg-white border-none rounded-lg p-1 text-xs font-bold text-gray-600 outline-none">
+               </div>
             </div>
           </div>
 
-          <div class="h-40 flex items-end justify-between gap-2">
+          <div class="h-40 flex items-end justify-between gap-2 border-b border-gray-100 pb-2">
+             <div v-if="dadosGrafico.length === 0" class="w-full text-center text-gray-300 text-xs py-10">
+                Selecione um período com atendimentos concluídos.
+             </div>
+
              <div v-for="(dado, index) in dadosGrafico" :key="index" class="flex flex-col items-center flex-1 group relative">
                 <div class="absolute -top-8 bg-[#0F172A] text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                    {{ formatarMoeda(dado.valor) }}
@@ -309,40 +317,72 @@ function formatarMoeda(valor) {
              </div>
           </div>
         </div>
+      </div>
 
-        <div class="space-y-4">
-          <div class="flex items-center gap-4 border-b border-gray-100 pb-2">
-            <button @click="abaAgenda = 'hoje'" :class="['text-sm font-bold pb-2 border-b-2 transition-all', abaAgenda === 'hoje' ? 'border-[#DB2777] text-[#0F172A]' : 'border-transparent text-gray-400']">Hoje</button>
-            <button @click="abaAgenda = 'amanha'" :class="['text-sm font-bold pb-2 border-b-2 transition-all', abaAgenda === 'amanha' ? 'border-[#DB2777] text-[#0F172A]' : 'border-transparent text-gray-400']">Amanhã</button>
-            <button @click="abaAgenda = 'semana'" :class="['text-sm font-bold pb-2 border-b-2 transition-all', abaAgenda === 'semana' ? 'border-[#DB2777] text-[#0F172A]' : 'border-transparent text-gray-400']">Próximos Dias</button>
-          </div>
+      <div v-if="abaPrincipal === 'agendamentos'" class="space-y-6 animate-fade-in">
+        
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+           <span class="font-bold text-[#0F172A]">Agenda do Dia</span>
+           <input type="date" v-model="dataFiltroAgenda" class="bg-gray-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-[#DB2777] outline-none">
+        </div>
 
-          <div v-if="agendaFiltrada.length === 0" class="text-center py-10 bg-white rounded-3xl border border-dashed border-gray-200">
-             <span class="text-2xl block mb-2">📅</span>
-             <p class="text-gray-400 text-sm">Agenda livre para este período.</p>
-          </div>
-
-          <div v-for="agenda in agendaFiltrada" :key="agenda.id" class="bg-white p-4 rounded-2xl border border-gray-100 flex justify-between items-start hover:shadow-md transition-shadow">
-             <div class="flex items-start gap-3">
-                <div class="bg-pink-50 text-[#DB2777] font-bold text-xs px-2 py-1 rounded-lg">
-                   {{ new Date(agenda.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
-                </div>
-                <div>
-                   <h3 class="font-bold text-[#0F172A]">{{ agenda.nomeCliente }}</h3>
-                   <p class="text-xs text-gray-500">{{ agenda.nomeServico }}</p>
-                   <p class="text-[10px] text-gray-400 mt-1" v-if="abaAgenda === 'semana'">{{ new Date(agenda.dataHora).toLocaleDateString() }}</p>
-                </div>
-             </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          
+          <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+             <h3 class="font-bold text-[#0F172A] mb-4 flex items-center gap-2">
+               <span class="w-2 h-2 rounded-full bg-yellow-400"></span> Pendentes / A Fazer
+             </h3>
              
-             <div class="flex flex-col items-end gap-2">
-                <span class="font-bold text-[#DB2777] text-sm">{{ formatarMoeda(agenda.valorServico) }}</span>
-                <div v-if="agenda.status === 'PENDENTE'" class="flex gap-1">
-                   <button @click="atualizarStatus(agenda.id, 'CONCLUIDO')" class="bg-green-100 text-green-600 p-1.5 rounded-lg hover:bg-green-200" title="Concluir">✔</button>
-                   <button @click="atualizarStatus(agenda.id, 'CANCELADO')" class="bg-red-50 text-red-500 p-1.5 rounded-lg hover:bg-red-100" title="Cancelar">✕</button>
+             <div v-if="listaPendentes.length === 0" class="text-center py-8 text-gray-400 text-sm">
+               Nada pendente para hoje.
+             </div>
+
+             <div v-for="agenda in listaPendentes" :key="agenda.id" class="mb-4 pb-4 border-b border-gray-50 last:border-0">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="text-xs font-bold bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-lg mb-1 inline-block">
+                      {{ new Date(agenda.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+                    </span>
+                    <h4 class="font-bold text-[#0F172A]">{{ agenda.nomeCliente }}</h4>
+                    <p class="text-xs text-gray-500">{{ agenda.nomeServico }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-[#DB2777] text-sm">{{ formatarMoeda(agenda.valorServico) }}</p>
+                    <div class="flex gap-2 mt-2">
+                       <button @click="atualizarStatus(agenda.id, 'CONCLUIDO')" class="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-1 rounded hover:bg-green-200">✔ Concluir</button>
+                       <button @click="atualizarStatus(agenda.id, 'CANCELADO')" class="text-[10px] font-bold bg-red-50 text-red-500 px-2 py-1 rounded hover:bg-red-100">✕</button>
+                    </div>
+                  </div>
                 </div>
-                <span v-else :class="['text-[10px] font-bold px-2 py-0.5 rounded uppercase', agenda.status === 'CONCLUIDO' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500']">{{ agenda.status }}</span>
              </div>
           </div>
+
+          <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+             <h3 class="font-bold text-[#0F172A] mb-4 flex items-center gap-2">
+               <span class="w-2 h-2 rounded-full bg-green-500"></span> Concluídos
+             </h3>
+
+             <div v-if="listaConcluidos.length === 0" class="text-center py-8 text-gray-400 text-sm">
+               Nenhum serviço concluído hoje.
+             </div>
+
+             <div v-for="agenda in listaConcluidos" :key="agenda.id" class="mb-4 pb-4 border-b border-gray-50 last:border-0 opacity-75 hover:opacity-100 transition-opacity">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <span class="text-xs font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-lg mb-1 inline-block">
+                      {{ new Date(agenda.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+                    </span>
+                    <h4 class="font-bold text-[#0F172A] line-through text-gray-400 decoration-gray-400">{{ agenda.nomeCliente }}</h4>
+                    <p class="text-xs text-gray-400">{{ agenda.nomeServico }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-gray-400 text-sm">{{ formatarMoeda(agenda.valorServico) }}</p>
+                    <span class="text-[10px] font-bold text-green-600 uppercase">Feito</span>
+                  </div>
+                </div>
+             </div>
+          </div>
+
         </div>
       </div>
 
@@ -394,7 +434,7 @@ function formatarMoeda(valor) {
 
     </main>
 
-    <button v-if="abaPrincipal === 'dashboard'" @click="modalAgendaOpen = true" class="fixed bottom-6 right-6 w-14 h-14 bg-[#DB2777] text-white rounded-full shadow-lg shadow-pink-500/40 flex items-center justify-center text-2xl hover:scale-110 transition-transform z-40">
+    <button @click="modalAgendaOpen = true" class="fixed bottom-6 right-6 w-14 h-14 bg-[#DB2777] text-white rounded-full shadow-lg shadow-pink-500/40 flex items-center justify-center text-2xl hover:scale-110 transition-transform z-40">
        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
     </button>
 
@@ -471,4 +511,14 @@ function formatarMoeda(valor) {
 <style scoped>
 .animate-fade-in { animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.input-modern {
+  @apply w-full px-4 py-3 rounded-xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-[#DB2777]/50 text-gray-800 text-sm;
+}
+.btn-primary { 
+  @apply flex-1 py-3 bg-[#DB2777] text-white rounded-xl text-xs font-bold hover:brightness-110 transition-colors uppercase tracking-wide; 
+}
+.btn-secondary { 
+  @apply flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors uppercase tracking-wide; 
+}
 </style>

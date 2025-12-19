@@ -40,10 +40,13 @@ public class UsuarioService {
         var user = usuarioRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
         
+        // BLOQUEIO 1: Conta desativada manualmente pelo Admin
         if (!user.isAtivo()) {
             throw new RuntimeException("CONTA_SUSPENSA");
         }
         
+        // BLOQUEIO 2: Validade da assinatura expirada
+        // Se a data de hoje for DEPOIS da data de validade, bloqueia.
         if (user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now())) {
             throw new RuntimeException("ASSINATURA_EXPIRADA");
         }
@@ -70,6 +73,11 @@ public class UsuarioService {
             throw new RuntimeException("E-mail já cadastrado!");
         }
 
+        // LÓGICA DE VALIDADE: Usa a data do Admin ou 30 dias padrão
+        LocalDate validadeFinal = request.getDataValidade() != null 
+                ? request.getDataValidade() 
+                : LocalDate.now().plusDays(30);
+
         Usuario novoProfissional = Usuario.builder()
                 .nome(request.getNome())
                 .email(request.getEmail())
@@ -78,7 +86,7 @@ public class UsuarioService {
                 .role(Usuario.Role.PROFISSIONAL)
                 .fotoUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "https://i.pravatar.cc/150")
                 .ativo(true)
-                .dataValidade(LocalDate.now().plusDays(30)) // Validade inicial 30 dias
+                .dataValidade(validadeFinal)
                 .build();
 
         usuarioRepository.save(novoProfissional);
@@ -131,19 +139,15 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    // --- MÉTODOS DE RECUPERAÇÃO DE SENHA (CORREÇÃO DO ERRO) ---
-
     public void requestPasswordReset(String email) {
         Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
         
-        // Se o usuário não existir, não fazemos nada por segurança (ou lançamos erro genérico)
         if (userOpt.isPresent()) {
             Usuario user = userOpt.get();
             String token = UUID.randomUUID().toString();
             user.setResetToken(token);
             usuarioRepository.save(user);
 
-            // Link do Frontend para redefinir
             String link = "http://localhost:5173/redefinir-senha?token=" + token;
             
             String assunto = "Recuperação de Senha - Space Nails";
@@ -162,7 +166,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new RuntimeException("Token inválido ou expirado."));
 
         user.setSenha(passwordEncoder.encode(newPassword));
-        user.setResetToken(null); // Limpa o token para não ser usado novamente
+        user.setResetToken(null);
         usuarioRepository.save(user);
     }
 
