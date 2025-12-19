@@ -1,5 +1,6 @@
 package com.space.nails.config;
 
+import com.space.nails.repository.UsuarioRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,22 +12,20 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.space.nails.repository.ClienteRepository;
-
 @Configuration
-
 public class ApplicationConfig {
 
     private final UsuarioRepository usuarioRepository;
 
-
+    // CORREÇÃO: Construtor manual (Injeção de Dependência explícita)
+    // Isso resolve o erro "variable usuarioRepository not initialized"
     public ApplicationConfig(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
     }
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> ClienteRepository.findByEmail(username)
+        return username -> usuarioRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
     }
 

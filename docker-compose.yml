@@ -5,19 +5,17 @@ services:
     container_name: cantinho_backend
     image: cantinho_backend:latest
     build: 
-      context: ./BACKEND-CANTINHO_EMOCOES
+      # CORREÇÃO: Caminho da pasta ajustado para o nome real do diretório
+      context: ./BACKEND-SPACE
       dockerfile: Dockerfile
-    # Não expomos a porta 8080 para fora (segurança), pois o Nginx interno (web) fará o proxy.
-    # Se precisar testar direto sem passar pelo frontend, descomente a linha abaixo.
-    # ports:
-    #   - "8080:8080"
     environment:
       - PORT=8080
-      # Usa o nome do serviço do banco de dados definido abaixo (db)
+      # Conexão interna com o container 'db'
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cantinho_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=minhasenha123 
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      # URL pública (necessária para links de e-mail, etc)
       - FRONTEND_URL=https://cantinhodosaber.online
     depends_on:
       - db
@@ -29,13 +27,14 @@ services:
     container_name: cantinho_frontend
     image: cantinho_frontend:latest
     build:
-      context: ./FRONTEND-CANTINHO_EMOCOES
+      # CORREÇÃO: Caminho da pasta ajustado (mantendo o nome 'FRONEND-SPACE' conforme seus arquivos)
+      context: ./FRONEND-SPACE
       dockerfile: Dockerfile
       args:
-        # A URL pública da API
+        # Define a URL da API para o build do Vue
         VITE_API_URL: https://cantinhodosaber.online
     ports:
-      # Mapeia a porta 3000 do VPS para a porta 80 do container Nginx
+      # Expondo a porta 3000 (externa) para a 80 (interna do Nginx)
       - "3000:80"
     depends_on:
       - app
@@ -52,6 +51,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=minhasenha123 
     ports:
+      # Porta do banco exposta apenas se precisar de acesso externo (DBeaver, etc)
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data

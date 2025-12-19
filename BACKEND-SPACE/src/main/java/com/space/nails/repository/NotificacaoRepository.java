@@ -1,15 +1,15 @@
 package com.space.nails.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
 import com.space.nails.model.Notificacao;
-import com.space.nails.model.Cliente;
-
+import com.space.nails.model.Usuario; // Mudança de Cliente para Usuario
+import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-@Repository
 public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
-    List<Notificacao> findByUsuarioOrderByDataEnvioDesc(Cliente cliente);
-    List<Notificacao> findByUsuarioAndLidoFalseOrderByDataEnvioDesc(Cliente cliente);
+    
+    // Busca notificações de um USUARIO específico
+    List<Notificacao> findByUsuarioOrderByDataEnvioDesc(Usuario usuario);
+
+    // Busca não lidas de um USUARIO específico
+    List<Notificacao> findByUsuarioAndLidoFalseOrderByDataEnvioDesc(Usuario usuario);
 }

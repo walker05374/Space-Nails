@@ -11,52 +11,90 @@ public class Agendamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne
+    @JoinColumn(name = "profissional_id", nullable = false)
+    private Usuario profissional;
+
+    @ManyToOne
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private Cliente cliente;
+
+    @ManyToOne
+    @JoinColumn(name = "servico_id", nullable = false)
+    private Servico servico;
+
     @Column(nullable = false)
     private LocalDateTime dataHora;
 
     @Enumerated(EnumType.STRING)
-    private StatusAgendamento status; // PENDENTE, CONCLUIDO, CANCELADO
+    @Column(nullable = false)
+    private StatusAgendamento status;
 
-    // Controle de Notificações WhatsApp
-    @Column(name = "lembrete_24h_enviado")
+    private String observacoes;
     private boolean lembrete24hEnviado = false;
-
-    @Column(name = "lembrete_2h_enviado")
     private boolean lembrete2hEnviado = false;
-    
-    // Endereço do atendimento (pode vir do perfil da manicure, mas bom salvar aqui caso mude)
-    @Column
     private String localizacao; 
 
-    @ManyToOne
-    @JoinColumn(name = "cliente_id")
-    private Cliente cliente;
+    // CONSTRUTORES
+    public Agendamento() {}
 
-    @ManyToOne
-    @JoinColumn(name = "servico_id")
-    private Servico servico;
+    public Agendamento(Long id, Usuario profissional, Cliente cliente, Servico servico, LocalDateTime dataHora, StatusAgendamento status, String observacoes, boolean lembrete24hEnviado, boolean lembrete2hEnviado, String localizacao) {
+        this.id = id;
+        this.profissional = profissional;
+        this.cliente = cliente;
+        this.servico = servico;
+        this.dataHora = dataHora;
+        this.status = status;
+        this.observacoes = observacoes;
+        this.lembrete24hEnviado = lembrete24hEnviado;
+        this.lembrete2hEnviado = lembrete2hEnviado;
+        this.localizacao = localizacao;
+    }
 
-    @ManyToOne
-    @JoinColumn(name = "profissional_id")
-    private Usuario profissional;
+    // BUILDER MANUAL
+    public static AgendamentoBuilder builder() { return new AgendamentoBuilder(); }
 
-    // Getters e Setters
+    public static class AgendamentoBuilder {
+        private Usuario profissional;
+        private Cliente cliente;
+        private Servico servico;
+        private LocalDateTime dataHora;
+        private StatusAgendamento status;
+        private String observacoes;
+        private String localizacao;
+
+        public AgendamentoBuilder profissional(Usuario p) { this.profissional = p; return this; }
+        public AgendamentoBuilder cliente(Cliente c) { this.cliente = c; return this; }
+        public AgendamentoBuilder servico(Servico s) { this.servico = s; return this; }
+        public AgendamentoBuilder dataHora(LocalDateTime d) { this.dataHora = d; return this; }
+        public AgendamentoBuilder status(StatusAgendamento s) { this.status = s; return this; }
+        public AgendamentoBuilder observacoes(String o) { this.observacoes = o; return this; }
+        public AgendamentoBuilder localizacao(String l) { this.localizacao = l; return this; }
+
+        public Agendamento build() {
+            return new Agendamento(null, profissional, cliente, servico, dataHora, status, observacoes, false, false, localizacao);
+        }
+    }
+
+    // GETTERS E SETTERS
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public Usuario getProfissional() { return profissional; }
+    public void setProfissional(Usuario profissional) { this.profissional = profissional; }
+    public Cliente getCliente() { return cliente; }
+    public void setCliente(Cliente cliente) { this.cliente = cliente; }
+    public Servico getServico() { return servico; }
+    public void setServico(Servico servico) { this.servico = servico; }
     public LocalDateTime getDataHora() { return dataHora; }
     public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
     public StatusAgendamento getStatus() { return status; }
     public void setStatus(StatusAgendamento status) { this.status = status; }
+    public String getObservacoes() { return observacoes; }
+    public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
     public boolean isLembrete24hEnviado() { return lembrete24hEnviado; }
     public void setLembrete24hEnviado(boolean lembrete24hEnviado) { this.lembrete24hEnviado = lembrete24hEnviado; }
     public boolean isLembrete2hEnviado() { return lembrete2hEnviado; }
     public void setLembrete2hEnviado(boolean lembrete2hEnviado) { this.lembrete2hEnviado = lembrete2hEnviado; }
     public String getLocalizacao() { return localizacao; }
     public void setLocalizacao(String localizacao) { this.localizacao = localizacao; }
-    public Cliente getCliente() { return cliente; }
-    public void setCliente(Cliente cliente) { this.cliente = cliente; }
-    public Servico getServico() { return servico; }
-    public void setServico(Servico servico) { this.servico = servico; }
-    public Cliente getProfissional() { return profissional; }
-    public void setProfissional(Cliente profissional) { this.profissional = profissional; }
 }

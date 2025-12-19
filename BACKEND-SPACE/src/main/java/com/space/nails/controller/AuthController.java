@@ -5,16 +5,19 @@ import com.space.nails.dto.LoginRequestDTO;
 import com.space.nails.dto.LoginResponseDTO;
 import com.space.nails.dto.ResetPasswordRequest;
 import com.space.nails.service.UsuarioService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final UsuarioService usuarioService;
+
+    // --- CONSTRUTOR MANUAL (A SOLUÇÃO) ---
+    public AuthController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO request) {

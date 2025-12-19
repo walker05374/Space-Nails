@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.space.nails.model.Notificacao;
-import com.space.nails.model.Cliente;
+import com.space.nails.model.Usuario; // CORREÇÃO: Importar Usuario, não Cliente
 import com.space.nails.repository.NotificacaoRepository;
 import com.space.nails.repository.UsuarioRepository;
 
@@ -23,38 +23,39 @@ public class NotificacaoService {
     }
 
     @Transactional
-    public Notificacao criarNotificacao(Cliente destinatario, String mensagem, String cor, String link) {
-        // CORREÇÃO: Usando o construtor manual de Notificacao
+    public Notificacao criarNotificacao(Usuario destinatario, String mensagem, String cor, String link) {
         Notificacao notificacao = new Notificacao(
-            null, // ID (será gerado automaticamente pelo DB)
-            destinatario,
+            null, 
+            destinatario, // Agora recebe um Usuario
             mensagem,
             link,
             LocalDateTime.now(),
-            false, // lido = false por padrão
+            false, 
             cor
         );
         return notificacaoRepository.save(notificacao);
     }
 
     @Transactional(readOnly = true)
-    public List<Notificacao> listarNotificacoesDoUsuario(Cliente cliente) {
-        return notificacaoRepository.findByUsuarioOrderByDataEnvioDesc(cliente);
+    public List<Notificacao> listarNotificacoesDoUsuario(Usuario usuario) {
+        return notificacaoRepository.findByUsuarioOrderByDataEnvioDesc(usuario);
     }
 
     @Transactional(readOnly = true)
-    public List<Notificacao> listarNotificacoesNaoLidasDoUsuario(Cliente cliente) {
-        return notificacaoRepository.findByUsuarioAndLidoFalseOrderByDataEnvioDesc(cliente);
+    public List<Notificacao> listarNotificacoesNaoLidasDoUsuario(Usuario usuario) {
+        return notificacaoRepository.findByUsuarioAndLidoFalseOrderByDataEnvioDesc(usuario);
     }
 
     @Transactional
     public Notificacao marcarNotificacaoComoLida(Long notificacaoId, String userEmail) {
-        Cliente usuarioAutenticado = usuarioRepository.findByEmail(userEmail)
+        // CORREÇÃO DO ERRO: Agora a variável é do tipo Usuario
+        Usuario usuarioAutenticado = usuarioRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado: " + userEmail));
 
         Notificacao notificacao = notificacaoRepository.findById(notificacaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Notificação não encontrada com ID: " + notificacaoId));
         
+        // Verifica se a notificação pertence ao usuário logado
         if (!notificacao.getUsuario().getId().equals(usuarioAutenticado.getId())) {
             throw new SecurityException("Usuário não autorizado a marcar esta notificação como lida.");
         }

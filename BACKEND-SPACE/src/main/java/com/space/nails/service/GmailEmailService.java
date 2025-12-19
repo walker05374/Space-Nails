@@ -19,38 +19,36 @@ public class GmailEmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    // Pega o email "de" a partir do application.properties
     @Value("${spring.mail.username}")
     private String fromEmail;
 
-    public boolean sendPasswordResetEmail(String toEmail, String userName, String resetLink) {
-
+    // --- MÉTODO NOVO GENÉRICO PARA CORRIGIR O ERRO DE COMPILAÇÃO ---
+    public boolean sendEmail(String toEmail, String subject, String body) {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
-
         try {
-            // Use MimeMessageHelper para criar e-mails com HTML, anexos, etc.
-            // O "true" indica que o conteúdo é HTML.
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
-
-            // Construa o corpo do email HTML
-            String htmlContent = "Olá " + userName + ",<br><br>" +
-                                 "Você solicitou a redefinição de sua senha. " +
-                                 "Clique no link a seguir para redefinir:<br>" +
-                                 "<a href=\"" + resetLink + "\">Redefinir Senha</a><br><br>" +
-                                 "Se você não solicitou isso, por favor, ignore este e-mail.";
-
-            helper.setText(htmlContent, true); // true = é HTML
+            helper.setText(body, true); // true = HTML permitido
             helper.setTo(toEmail);
-            helper.setSubject("Redefina sua Senha");
-            helper.setFrom(fromEmail); // O remetente é o mesmo da conta configurada
+            helper.setSubject(subject);
+            helper.setFrom(fromEmail);
 
             mailSender.send(mimeMessage);
-            logger.info("E-mail de redefinição de senha enviado para {} com sucesso!", toEmail);
+            logger.info("E-mail genérico enviado para {} com sucesso!", toEmail);
             return true;
-
         } catch (MessagingException e) {
             logger.error("Falha ao enviar e-mail para {}: {}", toEmail, e.getMessage());
             return false;
         }
+    }
+
+    // Método específico existente
+    public boolean sendPasswordResetEmail(String toEmail, String userName, String resetLink) {
+        // Você pode reutilizar o método acima ou manter a lógica específica aqui
+        String htmlContent = "Olá " + userName + ",<br><br>" +
+                             "Você solicitou a redefinição de sua senha. " +
+                             "Clique no link a seguir para redefinir:<br>" +
+                             "<a href=\"" + resetLink + "\">Redefinir Senha</a><br><br>" +
+                             "Se você não solicitou isso, por favor, ignore este e-mail.";
+        return sendEmail(toEmail, "Redefina sua Senha", htmlContent);
     }
 }

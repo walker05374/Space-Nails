@@ -4,7 +4,6 @@ import com.space.nails.dto.*;
 import com.space.nails.model.Usuario;
 import com.space.nails.repository.UsuarioRepository;
 import com.space.nails.security.JwtService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,14 +14,26 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final GmailEmailService emailService; // Certifique-se de ter este serviço criado
+    private final GmailEmailService emailService;
+
+    // --- CONSTRUTOR MANUAL (CORREÇÃO) ---
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtService jwtService,
+                          AuthenticationManager authenticationManager,
+                          GmailEmailService emailService) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
+        this.emailService = emailService;
+    }
 
     // --- LOGIN ---
     public LoginResponseDTO login(LoginRequestDTO request) {
@@ -63,7 +74,7 @@ public class UsuarioService {
         return mapToDTO(novoProfissional);
     }
 
-    // --- ATUALIZAR DADOS (Genérico) ---
+    // --- ATUALIZAR DADOS ---
     public UsuarioDTO atualizarUsuario(Long id, UpdateUsuarioDTO request) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -95,7 +106,6 @@ public class UsuarioService {
         usuario.setResetToken(token);
         usuarioRepository.save(usuario);
 
-        // Envio de e-mail (ajuste a mensagem conforme necessário)
         emailService.sendEmail(
             usuario.getEmail(), 
             "Recuperação de Senha", 
@@ -108,7 +118,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new RuntimeException("Token inválido"));
 
         usuario.setSenha(passwordEncoder.encode(newPassword));
-        usuario.setResetToken(null); // Limpa o token após uso
+        usuario.setResetToken(null); 
         usuarioRepository.save(usuario);
     }
 
