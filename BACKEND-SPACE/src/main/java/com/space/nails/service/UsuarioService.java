@@ -65,6 +65,7 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .userId(user.getId())
                 .avatar(user.getFotoUrl())
+                .dataValidade(user.getDataValidade()) // <--- LINHA CRUCIAL ADICIONADA
                 .build();
     }
 
@@ -147,7 +148,7 @@ public class UsuarioService {
             user.setResetToken(token);
             usuarioRepository.save(user);
 
-            // Ajuste a URL conforme seu ambiente (localhost ou produção)
+            // Ajuste a URL conforme seu ambiente
             String link = "http://localhost:5173/redefinir-senha?token=" + token;
             
             String assunto = "Recuperação de Senha - Space Nails";
@@ -176,15 +177,8 @@ public class UsuarioService {
                 .collect(Collectors.toList());
     }
 
-    // --- AQUI ESTÁ A CORREÇÃO DO STATUS ---
     private UsuarioDTO mapToDTO(Usuario user) {
-        // Verifica se a data de hoje já passou da validade
         boolean expirado = user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now());
-
-        // Define o status visual:
-        // O usuário só será considerado "Ativo" no JSON se:
-        // 1. Estiver marcado como ativo no banco (isAtivo)
-        // 2. E NÃO estiver expirado (!expirado)
         boolean statusVisual = user.isAtivo() && !expirado;
 
         return UsuarioDTO.builder()
@@ -194,7 +188,6 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .telefone(user.getTelefone())
                 .avatarUrl(user.getFotoUrl())
-                // Aqui enviamos o status calculado para o Dashboard mostrar "Suspenso/Inativo"
                 .ativo(statusVisual) 
                 .dataValidade(user.getDataValidade())
                 .build();

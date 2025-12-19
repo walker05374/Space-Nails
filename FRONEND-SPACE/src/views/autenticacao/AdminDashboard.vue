@@ -28,6 +28,42 @@ const stats = computed(() => {
   };
 });
 
+// --- FUNÇÃO DE DATA (ANTI-FUSO HORÁRIO) ---
+// Garante que dia 25 seja lido como dia 25, ignorando GMT do navegador
+function criarDataLocal(dataString) {
+  if (!dataString) return null;
+  // Pega YYYY-MM-DD
+  const limpa = dataString.split('T')[0];
+  const [ano, mes, dia] = limpa.split('-').map(Number);
+  // Cria data ao meio-dia para segurança
+  return new Date(ano, mes - 1, dia, 12, 0, 0);
+}
+
+// --- LÓGICA DO SININHO (VENCIMENTO PRÓXIMO) ---
+const usuariosVencendo = computed(() => {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const diasAlerta = 5; // Avisar com 5 dias de antecedência
+  const dataLimite = new Date(hoje);
+  dataLimite.setDate(hoje.getDate() + diasAlerta);
+  // Ajuste para final do dia limite
+  dataLimite.setHours(23, 59, 59, 999);
+
+  return usuarios.value.filter(u => {
+    if (u.role === 'ADMIN' || !u.dataValidade) return false;
+    
+    const validade = criarDataLocal(u.dataValidade);
+    if (!validade) return false;
+
+    // Lógica: Mostrar se validade for maior/igual a hoje E menor/igual a dataLimite
+    // Isso pega quem vence hoje, amanhã, até 5 dias.
+    return validade >= hoje && validade <= dataLimite;
+  });
+});
+
+const alertasPendentes = computed(() => usuariosVencendo.value.length);
+
 onMounted(buscarUsuarios);
 
 async function buscarUsuarios() {
@@ -44,7 +80,6 @@ async function buscarUsuarios() {
 
 async function cadastrarUsuario() {
   try {
-    // Validade padrão de 30 dias se vazio
     if (!novoUsuario.value.dataValidade) {
         const hoje = new Date();
         hoje.setDate(hoje.getDate() + 30);
@@ -62,13 +97,10 @@ async function cadastrarUsuario() {
 }
 
 async function excluirUsuario(usuario) {
-  // BLOQUEIO: Não excluir admins
   if (usuario.role === 'ADMIN') {
     return alert("⚠️ Segurança: Não é possível excluir um Administrador.");
   }
-  
   if (!confirm(`Tem certeza que deseja excluir o acesso de ${usuario.nome}?`)) return;
-  
   try {
     await api.delete(`/api/admin/usuarios/${usuario.id}`);
     usuarios.value = usuarios.value.filter(u => u.id !== usuario.id);
@@ -84,7 +116,11 @@ async function alternarStatus(usuario) {
 }
 
 function abrirEdicao(usuario) {
-  usuarioSelecionado.value = { ...usuario, dataValidade: usuario.dataValidade ? usuario.dataValidade.split('T')[0] : '' };
+  let dataPura = '';
+  if (usuario.dataValidade) {
+      dataPura = usuario.dataValidade.split('T')[0];
+  }
+  usuarioSelecionado.value = { ...usuario, dataValidade: dataPura };
   mostrarModalEdicao.value = true;
 }
 
@@ -98,22 +134,68 @@ async function salvarEdicao() {
 }
 
 function formatarData(data) {
-  if (!data) return 'Vitalício';
-  return new Date(data).toLocaleDateString('pt-BR');
+  const d = criarDataLocal(data);
+  if (!d) return 'Vitalício';
+  return d.toLocaleDateString('pt-BR');
+}
+
+function isVencendo(usuario) {
+  if (usuario.role === 'ADMIN' || !usuario.dataValidade) return false;
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const dataLimite = new Date(hoje);
+  dataLimite.setDate(hoje.getDate() + 5);
+  
+  const validade = criarDataLocal(usuario.dataValidade);
+  if (!validade) return false;
+
+  return validade >= hoje && validade <= dataLimite;
 }
 </script>
 
 <template>
   <div class="min-h-screen bg-[#F8FAFC] font-sans pb-10">
     
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 px-6 py-4 flex justify-between items-center shadow-sm">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 md:px-6 py-4 flex justify-between items-center shadow-sm">
       <div class="flex items-center gap-2">
-        <h1 class="text-xl font-bold text-[#0F172A]">Painel <span class="text-[#DB2777]">Admin</span></h1>
+        <h1 class="text-lg md:text-xl font-bold text-[#0F172A]">Painel <span class="text-[#DB2777]">Admin</span></h1>
       </div>
-      <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
+
+      <div class="flex items-center gap-3 md:gap-4">
+        
+        <div class="relative group cursor-pointer" title="Próximos Vencimentos">
+          <div class="p-2 rounded-xl hover:bg-gray-100 transition-colors relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            
+            <span v-if="alertasPendentes > 0" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-bold text-white animate-pulse">
+              {{ alertasPendentes }}
+            </span>
+          </div>
+
+          <div v-if="alertasPendentes > 0" class="absolute right-0 top-full mt-2 w-72 bg-white shadow-xl rounded-xl p-4 border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+             <div class="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                <p class="text-xs font-bold text-gray-900 uppercase">Vencendo em breve (5 dias)</p>
+             </div>
+             <ul class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+               <li v-for="u in usuariosVencendo" :key="u.id" class="text-xs text-gray-600 flex justify-between items-center p-1 hover:bg-gray-50 rounded">
+                 <span class="font-medium text-[#0F172A] truncate w-32">{{ u.nome }}</span>
+                 <span class="font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded ml-2">{{ formatarData(u.dataValidade) }}</span>
+               </li>
+             </ul>
+          </div>
+        </div>
+
+        <div class="h-6 w-px bg-gray-200 mx-1"></div>
+
+        <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
+      </div>
     </header>
 
-    <main class="p-6 max-w-7xl mx-auto space-y-8">
+    <main class="p-4 md:p-6 max-w-7xl mx-auto space-y-8">
       
       <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -125,7 +207,7 @@ function formatarData(data) {
           <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.ativos }}</p>
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <span class="text-xs font-bold text-red-500 uppercase">Suspensos</span>
+          <span class="text-xs font-bold text-red-500 uppercase">Inativos/Vencidos</span>
           <p class="text-3xl font-bold text-red-500 mt-1">{{ stats.vencidos }}</p>
         </div>
       </section>
@@ -156,15 +238,19 @@ function formatarData(data) {
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-[#0F172A] flex items-center gap-2">
                       {{ user.nome }}
+                      <span v-if="isVencendo(user)" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold whitespace-nowrap">VENCE EM BREVE</span>
                       <span v-if="user.role === 'ADMIN'" class="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full">ADMIN</span>
                     </span>
                     <span class="text-xs text-gray-400">{{ user.email }}</span>
                   </div>
                 </td>
                 
-                <td class="p-4 text-xs font-medium text-gray-600">
+                <td class="p-4 text-xs font-medium text-gray-600 whitespace-nowrap">
                    <span v-if="user.role === 'ADMIN'">---</span>
-                   <span v-else :class="{'text-red-500 font-bold': !user.ativo}">{{ formatarData(user.dataValidade) }}</span>
+                   <span v-else :class="{
+                     'text-red-500 font-bold': !user.ativo,
+                     'text-orange-500 font-bold': isVencendo(user)
+                   }">{{ formatarData(user.dataValidade) }}</span>
                 </td>
 
                 <td class="p-4 text-center">
@@ -208,7 +294,6 @@ function formatarData(data) {
             <label class="text-xs font-bold text-gray-400 ml-1 mb-1 block">Validade da Assinatura</label>
             <input type="date" v-model="novoUsuario.dataValidade" class="input-modern">
           </div>
-          
           <div class="flex gap-3 pt-4">
             <button @click="mostrarModalCadastro = false" class="btn-secondary">Cancelar</button>
             <button @click="cadastrarUsuario" class="btn-primary">Cadastrar</button>
@@ -247,4 +332,7 @@ function formatarData(data) {
 .input-modern { @apply w-full px-4 py-3 rounded-xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-[#DB2777]/50 text-gray-800 text-sm; }
 .btn-primary { @apply flex-1 py-3 bg-[#DB2777] text-white rounded-xl text-xs font-bold hover:brightness-110 transition-colors uppercase tracking-wide; }
 .btn-secondary { @apply flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors uppercase tracking-wide; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #DB2777; border-radius: 4px; }
 </style>

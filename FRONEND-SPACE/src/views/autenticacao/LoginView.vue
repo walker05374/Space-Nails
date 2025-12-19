@@ -44,7 +44,16 @@ async function fazerLogin() {
     });
     
     const userData = response.data;
-    authStore.setLoginData({ id: userData.userId, nome: userData.nome, email: userData.email, role: userData.role, avatar: userData.avatar }, userData.token);
+    
+    // CORREÇÃO AQUI: Adicionado 'dataValidade' ao objeto salvo
+    authStore.setLoginData({ 
+        id: userData.userId, 
+        nome: userData.nome, 
+        email: userData.email, 
+        role: userData.role, 
+        avatar: userData.avatar,
+        dataValidade: userData.dataValidade // <--- IMPORTANTE
+    }, userData.token);
     
     if (userData.role === 'ADMIN') {
         router.push('/admin');

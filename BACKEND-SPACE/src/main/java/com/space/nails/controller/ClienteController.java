@@ -18,13 +18,11 @@ public class ClienteController {
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
 
-    // --- CONSTRUTOR MANUAL (CORREÇÃO DO ERRO) ---
     public ClienteController(ClienteRepository clienteRepository, UsuarioRepository usuarioRepository) {
         this.clienteRepository = clienteRepository;
         this.usuarioRepository = usuarioRepository;
     }
 
-    // Pega o Profissional que está logado no momento
     private Usuario getUsuarioLogado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return usuarioRepository.findByEmail(auth.getName())
@@ -34,18 +32,13 @@ public class ClienteController {
     @PostMapping
     public ResponseEntity<Cliente> criarCliente(@RequestBody Cliente cliente) {
         Usuario profissional = getUsuarioLogado();
-        
-        // VINCULA O CLIENTE AO PROFISSIONAL LOGADO
         cliente.setProfissional(profissional); 
-        
         return ResponseEntity.ok(clienteRepository.save(cliente));
     }
 
     @GetMapping
     public ResponseEntity<List<Cliente>> listarMeusClientes() {
         Usuario profissional = getUsuarioLogado();
-        
-        // Se for ADMIN, vê todos. Se for PROFISSIONAL, vê só os seus.
         if (profissional.getRole() == Usuario.Role.ADMIN) {
             return ResponseEntity.ok(clienteRepository.findAll());
         }
@@ -58,10 +51,9 @@ public class ClienteController {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        // Segurança: Só deixa editar se o cliente for desse profissional (ou se for Admin)
         if (!cliente.getProfissional().getId().equals(profissional.getId()) 
             && profissional.getRole() != Usuario.Role.ADMIN) {
-            throw new RuntimeException("Acesso negado: Este cliente pertence a outro profissional.");
+            throw new RuntimeException("Acesso negado.");
         }
 
         cliente.setNome(dados.getNome());
@@ -69,5 +61,22 @@ public class ClienteController {
         cliente.setObservacoes(dados.getObservacoes());
         
         return ResponseEntity.ok(clienteRepository.save(cliente));
+    }
+
+    // --- NOVO: MÉTODO DE EXCLUIR ---
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluirCliente(@PathVariable Long id) {
+        Usuario profissional = getUsuarioLogado();
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+        // Segurança: Só apaga se for o dono ou Admin
+        if (!cliente.getProfissional().getId().equals(profissional.getId()) 
+            && profissional.getRole() != Usuario.Role.ADMIN) {
+            throw new RuntimeException("Acesso negado: Você não pode excluir este cliente.");
+        }
+
+        clienteRepository.delete(cliente);
+        return ResponseEntity.noContent().build();
     }
 }
