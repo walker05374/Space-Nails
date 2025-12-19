@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -24,7 +25,6 @@ public class DashboardController {
     private final ClienteRepository clienteRepository;
     private final AgendamentoRepository agendamentoRepository;
 
-    // --- CONSTRUTOR MANUAL ---
     public DashboardController(UsuarioRepository usuarioRepository, 
                                ClienteRepository clienteRepository, 
                                AgendamentoRepository agendamentoRepository) {
@@ -46,6 +46,7 @@ public class DashboardController {
         long agendaHoje = 0;
         double faturamento = 0.0;
 
+        // Lógica de Estatísticas (Admin vs Profissional)
         if (usuario.getRole() == Usuario.Role.ADMIN) {
             totalProfs = usuarioRepository.count();
             totalClientes = clienteRepository.count();
@@ -59,11 +60,34 @@ public class DashboardController {
             faturamento = (fat != null) ? fat : 0.0;
         }
 
-        return ResponseEntity.ok(DashboardStatsDTO.builder()
-                .totalProfissionais(totalProfs)
-                .totalClientes(totalClientes)
-                .agendamentosHoje(agendaHoje)
-                .faturamentoHoje(faturamento)
-                .build());
+        // --- LÓGICA DE VALIDADE ---
+        String avisoValidade = null;
+        Integer diasRestantes = null;
+        boolean assinaturaAtiva = true;
+
+        if (usuario.getDataValidade() != null) {
+            long dias = ChronoUnit.DAYS.between(LocalDate.now(), usuario.getDataValidade());
+            diasRestantes = (int) dias;
+
+            if (dias < 0) {
+                avisoValidade = "Sua assinatura expirou. Renove agora.";
+                assinaturaAtiva = false;
+            } else if (dias <= 5) {
+                avisoValidade = "Atenção: Sua assinatura vence em " + dias + " dias.";
+            }
+        }
+
+        // --- RETORNO MANUAL (SEM LOMBOK) ---
+        DashboardStatsDTO dto = new DashboardStatsDTO();
+        dto.setTotalProfissionais(totalProfs);
+        dto.setTotalClientes(totalClientes);
+        dto.setAgendamentosHoje(agendaHoje);
+        dto.setFaturamentoHoje(faturamento);
+        
+        dto.setAvisoValidade(avisoValidade);
+        dto.setDiasRestantes(diasRestantes);
+        dto.setAssinaturaAtiva(assinaturaAtiva);
+
+        return ResponseEntity.ok(dto);
     }
 }

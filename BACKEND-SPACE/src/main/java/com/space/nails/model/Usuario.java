@@ -124,8 +124,21 @@ public class Usuario implements UserDetails {
 
     @Override public String getPassword() { return senha; }
     @Override public String getUsername() { return email; }
-    @Override public boolean isAccountNonExpired() { return true; }
+
+    @Override 
+    public boolean isAccountNonExpired() { 
+        // Se dataValidade for nula, assume-se vitalício (retorna true)
+        if (dataValidade == null) return true;
+        
+        // Se a data de validade for ANTERIOR a hoje, está expirado (retorna false)
+        return !dataValidade.isBefore(LocalDate.now());
+    }
+
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return ativo; } // Vincula o status ativo ao login do Spring Security
+    
+    @Override 
+    public boolean isEnabled() { 
+        return ativo; 
+    }
 }

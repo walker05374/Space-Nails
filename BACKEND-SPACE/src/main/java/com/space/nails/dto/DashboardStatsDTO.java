@@ -1,68 +1,77 @@
 package com.space.nails.dto;
 
 public class DashboardStatsDTO {
+
+    // Campos originais
     private long totalProfissionais;
     private long totalClientes;
     private long agendamentosHoje;
     private double faturamentoHoje;
 
-    // Construtor Vazio
-    public DashboardStatsDTO() {}
+    // Novos campos de Validade
+    private String avisoValidade;
+    private Integer diasRestantes;
+    private boolean assinaturaAtiva;
 
-    // Construtor Completo
-    public DashboardStatsDTO(long totalProfissionais, long totalClientes, long agendamentosHoje, double faturamentoHoje) {
+    // --- CONSTRUTOR VAZIO ---
+    public DashboardStatsDTO() {
+    }
+
+    // --- GETTERS E SETTERS ---
+
+    public long getTotalProfissionais() {
+        return totalProfissionais;
+    }
+
+    public void setTotalProfissionais(long totalProfissionais) {
         this.totalProfissionais = totalProfissionais;
+    }
+
+    public long getTotalClientes() {
+        return totalClientes;
+    }
+
+    public void setTotalClientes(long totalClientes) {
         this.totalClientes = totalClientes;
+    }
+
+    public long getAgendamentosHoje() {
+        return agendamentosHoje;
+    }
+
+    public void setAgendamentosHoje(long agendamentosHoje) {
         this.agendamentosHoje = agendamentosHoje;
+    }
+
+    public double getFaturamentoHoje() {
+        return faturamentoHoje;
+    }
+
+    public void setFaturamentoHoje(double faturamentoHoje) {
         this.faturamentoHoje = faturamentoHoje;
     }
 
-    // --- BUILDER MANUAL (CORREÇÃO) ---
-    public static DashboardStatsDTOBuilder builder() {
-        return new DashboardStatsDTOBuilder();
+    public String getAvisoValidade() {
+        return avisoValidade;
     }
 
-    public static class DashboardStatsDTOBuilder {
-        private long totalProfissionais;
-        private long totalClientes;
-        private long agendamentosHoje;
-        private double faturamentoHoje;
-
-        public DashboardStatsDTOBuilder totalProfissionais(long totalProfissionais) {
-            this.totalProfissionais = totalProfissionais;
-            return this;
-        }
-
-        public DashboardStatsDTOBuilder totalClientes(long totalClientes) {
-            this.totalClientes = totalClientes;
-            return this;
-        }
-
-        public DashboardStatsDTOBuilder agendamentosHoje(long agendamentosHoje) {
-            this.agendamentosHoje = agendamentosHoje;
-            return this;
-        }
-
-        public DashboardStatsDTOBuilder faturamentoHoje(double faturamentoHoje) {
-            this.faturamentoHoje = faturamentoHoje;
-            return this;
-        }
-
-        public DashboardStatsDTO build() {
-            return new DashboardStatsDTO(totalProfissionais, totalClientes, agendamentosHoje, faturamentoHoje);
-        }
+    public void setAvisoValidade(String avisoValidade) {
+        this.avisoValidade = avisoValidade;
     }
 
-    // Getters e Setters
-    public long getTotalProfissionais() { return totalProfissionais; }
-    public void setTotalProfissionais(long totalProfissionais) { this.totalProfissionais = totalProfissionais; }
+    public Integer getDiasRestantes() {
+        return diasRestantes;
+    }
 
-    public long getTotalClientes() { return totalClientes; }
-    public void setTotalClientes(long totalClientes) { this.totalClientes = totalClientes; }
+    public void setDiasRestantes(Integer diasRestantes) {
+        this.diasRestantes = diasRestantes;
+    }
 
-    public long getAgendamentosHoje() { return agendamentosHoje; }
-    public void setAgendamentosHoje(long agendamentosHoje) { this.agendamentosHoje = agendamentosHoje; }
+    public boolean isAssinaturaAtiva() {
+        return assinaturaAtiva;
+    }
 
-    public double getFaturamentoHoje() { return faturamentoHoje; }
-    public void setFaturamentoHoje(double faturamentoHoje) { this.faturamentoHoje = faturamentoHoje; }
+    public void setAssinaturaAtiva(boolean assinaturaAtiva) {
+        this.assinaturaAtiva = assinaturaAtiva;
+    }
 }

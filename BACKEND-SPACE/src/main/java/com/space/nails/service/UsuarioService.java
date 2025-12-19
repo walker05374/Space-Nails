@@ -40,17 +40,18 @@ public class UsuarioService {
         var user = usuarioRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
         
-        // BLOQUEIO 1: Conta desativada manualmente pelo Admin
+        // 1. Verifica se a conta está desativada manualmente (toggle do admin)
         if (!user.isAtivo()) {
             throw new RuntimeException("CONTA_SUSPENSA");
         }
         
-        // BLOQUEIO 2: Validade da assinatura expirada
-        // Se a data de hoje for DEPOIS da data de validade, bloqueia.
+        // 2. Verifica se a validade expirou (REGRA RIGOROSA)
         if (user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now())) {
+            // Lança exceção para o Frontend exibir o aviso
             throw new RuntimeException("ASSINATURA_EXPIRADA");
         }
 
+        // Se passou, tenta autenticar no Spring Security
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
@@ -67,13 +68,11 @@ public class UsuarioService {
                 .build();
     }
 
-    // Criar profissionais via Admin ou Registro
     public UsuarioDTO criarProfissional(RegisterRequestDTO request) {
         if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("E-mail já cadastrado!");
         }
 
-        // LÓGICA DE VALIDADE: Usa a data do Admin ou 30 dias padrão
         LocalDate validadeFinal = request.getDataValidade() != null 
                 ? request.getDataValidade() 
                 : LocalDate.now().plusDays(30);
@@ -148,6 +147,7 @@ public class UsuarioService {
             user.setResetToken(token);
             usuarioRepository.save(user);
 
+            // Ajuste a URL conforme seu ambiente (localhost ou produção)
             String link = "http://localhost:5173/redefinir-senha?token=" + token;
             
             String assunto = "Recuperação de Senha - Space Nails";
@@ -176,7 +176,17 @@ public class UsuarioService {
                 .collect(Collectors.toList());
     }
 
+    // --- AQUI ESTÁ A CORREÇÃO DO STATUS ---
     private UsuarioDTO mapToDTO(Usuario user) {
+        // Verifica se a data de hoje já passou da validade
+        boolean expirado = user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now());
+
+        // Define o status visual:
+        // O usuário só será considerado "Ativo" no JSON se:
+        // 1. Estiver marcado como ativo no banco (isAtivo)
+        // 2. E NÃO estiver expirado (!expirado)
+        boolean statusVisual = user.isAtivo() && !expirado;
+
         return UsuarioDTO.builder()
                 .id(user.getId())
                 .nome(user.getNome())
@@ -184,7 +194,8 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .telefone(user.getTelefone())
                 .avatarUrl(user.getFotoUrl())
-                .ativo(user.isAtivo())
+                // Aqui enviamos o status calculado para o Dashboard mostrar "Suspenso/Inativo"
+                .ativo(statusVisual) 
                 .dataValidade(user.getDataValidade())
                 .build();
     }
