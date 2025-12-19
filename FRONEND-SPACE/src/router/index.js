@@ -1,60 +1,80 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// --- VIEWS GERAIS ---
-const LoginView = () => import('../views/autenticacao/LoginView.vue')
-const RegistroView = () => import('../views/autenticacao/RegistroView.vue')
-const RecuperarSenhaView = () => import('../views/autenticacao/RecuperarSenhaView.vue')
-const ResetarSenhaView = () => import('../views/autenticacao/RedefinirSenhaView.vue') 
-const HomeView = () => import('../views/inicio/HomeView.vue')
-// Admin (Manter se for usar painel administrativo)
-const AdminDashboard = () => import('../views/autenticacao/AdminDashboard.vue')
+// Importação das Views
+import LoginView from '../views/autenticacao/LoginView.vue'
+import HomeView from '../views/inicio/HomeView.vue'
+import AdminDashboard from '../views/autenticacao/AdminDashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/login' },
-    
-    // Rotas Públicas
-    { path: '/login', name: 'login', component: LoginView },
-    { path: '/registro', name: 'registro', component: RegistroView },
-    { path: '/recuperar-senha', name: 'recuperar-senha', component: RecuperarSenhaView },
-    { path: '/resetar-senha', name: 'resetar-senha', component: ResetarSenhaView },
-
-    // Rotas Privadas
-    { 
-      path: '/home', 
-      name: 'home', 
-      component: HomeView, 
-      meta: { requiresAuth: true } 
+    {
+      path: '/',
+      redirect: '/login'
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { publico: true } // Marca como pública
+    },
+    // --- ROTAS DE SENHA (PÚBLICAS) ---
+    {
+      path: '/recuperar-senha',
+      name: 'recuperar-senha',
+      component: () => import('../views/autenticacao/RecuperarSenhaView.vue'),
+      meta: { publico: true } // Importante: Permite acesso sem login
+    },
+    {
+      path: '/redefinir-senha', // O link do e-mail apontará para cá
+      name: 'redefinir-senha',
+      component: () => import('../views/autenticacao/RedefinirSenhaView.vue'),
+      meta: { publico: true } // Importante: Permite acesso sem login
+    },
+    // --- ROTAS PROTEGIDAS ---
+    {
+      path: '/home',
+      name: 'home',
+      component: HomeView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/admin',
-      name: 'AdminDashboard',
+      name: 'admin',
       component: AdminDashboard,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, role: 'ADMIN' }
     },
+    // Rota para qualquer URL não encontrada volta pro login
+    { 
+      path: '/:pathMatch(.*)*', 
+      redirect: '/login' 
+    }
   ]
 })
 
-// --- GUARDA DE ROTAS ---
+// --- GUARDA DE NAVEGAÇÃO (Segurança) ---
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  const isAuthenticated = !!authStore.token
-  const publicPages = ['/login', '/registro', '/recuperar-senha', '/resetar-senha'];
-  const authRequired = !publicPages.includes(to.path);
+  const auth = useAuthStore();
+  const estaLogado = !!auth.token; // Verifica se tem token
+  const ehRotaPublica = to.meta.publico;
 
-  // 1. Não logado -> Login
-  if (authRequired && !isAuthenticated) {
+  // 1. Se a rota NÃO é pública e o usuário NÃO está logado -> Manda pro Login
+  if (!ehRotaPublica && !estaLogado) {
     return next('/login');
   }
 
-  // 2. Logado tentando ir para Login -> Home
-  if (isAuthenticated && publicPages.includes(to.path)) {
-    return next('/home');
+  // 2. Se o usuário JÁ está logado e tenta ir pro Login -> Manda pra Home (ou Admin)
+  if (ehRotaPublica && estaLogado && to.path === '/login') {
+    return next(auth.user?.role === 'ADMIN' ? '/admin' : '/home');
   }
 
-  next();
+  // 3. Verificação de Permissão de Admin
+  if (to.meta.role === 'ADMIN' && auth.user?.role !== 'ADMIN') {
+    return next('/home'); // Se tentar acessar admin sem ser admin, vai pra home
+  }
+
+  next(); // Segue o fluxo normal
 })
 
-export default router;
+export default router

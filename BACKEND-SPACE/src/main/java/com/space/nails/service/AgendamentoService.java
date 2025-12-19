@@ -5,7 +5,6 @@ import com.space.nails.model.*;
 import com.space.nails.repository.*;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +16,6 @@ public class AgendamentoService {
     private final ServicoRepository servicoRepository;
     private final UsuarioRepository usuarioRepository;
 
-    // CONSTRUTOR MANUAL
     public AgendamentoService(AgendamentoRepository agendamentoRepository,
                               ClienteRepository clienteRepository,
                               ServicoRepository servicoRepository,
@@ -35,18 +33,34 @@ public class AgendamentoService {
         Cliente cliente = clienteRepository.findById(dto.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        Servico servico = servicoRepository.findById(dto.getServicoId())
-                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+        // --- CORREÇÃO DE SERVIÇO (Evita o erro "Não encontrado") ---
+        Servico servico = null;
 
-        if (!cliente.getProfissional().getId().equals(profissional.getId()) && profissional.getRole() != Usuario.Role.ADMIN) {
-            throw new RuntimeException("Este cliente não pertence a você.");
+        // 1. Se veio um ID, tenta buscar no banco
+        if (dto.getServicoId() != null) {
+            servico = servicoRepository.findById(dto.getServicoId()).orElse(null);
         }
 
+        // 2. Se não achou pelo ID (ou ID era nulo), cria um novo serviço
+        if (servico == null) {
+            // Validação simples
+            String nomeServico = dto.getNomeServico() != null ? dto.getNomeServico() : "Serviço Personalizado";
+            Double valorServico = dto.getValorServico() != null ? dto.getValorServico() : 0.0;
+
+            servico = new Servico();
+            servico.setNome(nomeServico);
+            servico.setValor(valorServico);
+            servico.setTempoEstimado(60); // Padrão
+            servico.setProfissional(profissional); // Vincula ao profissional logado
+            
+            servico = servicoRepository.save(servico);
+        }
+
+        // Verifica conflito de horário
         if (agendamentoRepository.existeConflitoHorario(profissional, dto.getDataHora())) {
             throw new RuntimeException("Já existe um agendamento neste horário!");
         }
 
-        // Usando o Builder manual do Agendamento (definido abaixo)
         Agendamento agendamento = Agendamento.builder()
                 .profissional(profissional)
                 .cliente(cliente)
@@ -89,7 +103,6 @@ public class AgendamentoService {
         dto.setStatus(a.getStatus());
         dto.setObservacoes(a.getObservacoes());
         
-        // Campos extras para visualização
         dto.setNomeCliente(a.getCliente().getNome());
         dto.setNomeServico(a.getServico().getNome());
         dto.setValorServico(a.getServico().getValor());

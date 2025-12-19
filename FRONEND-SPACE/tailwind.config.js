@@ -7,40 +7,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Cores do Gradiente de Fundo (Lavanda para Pêssego)
-        'lavanda': '#E6E6FA',
-        'pessego': '#FFDAB9',
-        'fundo-inicio': '#FDFBF7', // Creme suave para o fundo da Home
-        
-        // Cores dos Cartões (Baseado nas imagens do protótipo)
-        'card-diario': '#F3E8FF',   // Lilás suave
-        'card-desenho': '#E0F2F1',  // Verde água
-        'card-jogos': '#FFF9C4',    // Amarelo pastel
-        'card-emocoes': '#FCE4EC',  // Rosa bebê
-        
-        // Cores de Texto e Detalhes
-        'texto-escuro': '#4A4A4A',
-        'texto-suave': '#787878',
-        'roxo-titulo': '#8B5CF6',   // Cor do título principal
-        'azul-ceu': '#87CEEB',
-        'rosa-suave': '#FFB6C1',
+        // Paleta Modern Chic
+        'brand-bg': '#F8FAFC',       // Cinza muito claro, quase branco (fundo geral)
+        'brand-surface': '#FFFFFF',   // Branco puro (cards)
+        'brand-dark': '#0F172A',      // Azul marinho quase preto (textos principais)
+        'brand-gray': '#64748B',      // Cinza moderno (textos secundários)
+        'brand-primary': '#DB2777',   // Pink Raspberry (Ação/Destaque) - Vibrante
+        'brand-primary-light': '#FCE7F3', // Fundo suave do Pink
+        'brand-accent': '#8B5CF6',    // Roxo moderno (detalhes sutis)
+        'status-success': '#10B981',  // Verde Esmeralda
+        'status-error': '#EF4444',    // Vermelho Vivo
       },
       fontFamily: {
-        // Fonte arredondada e amigável para crianças
-        'nunito': ['"Nunito"', 'sans-serif'],
-      },
-      animation: {
-        'flutuar': 'flutuar 3s ease-in-out infinite',
-      },
-      keyframes: {
-        flutuar: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
-        }
+        'sans': ['"Poppins"', 'sans-serif'], // Fonte geométrica moderna
       },
       boxShadow: {
-        'suave': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-        'flutuar': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', // Sombra sutil
+        'float': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', // Sombra forte para botões
+      },
+      borderRadius: {
+        'xl': '1rem',
+        '2xl': '1.5rem',
+        '3xl': '2rem', // Arredondamento moderno
       }
     },
   },

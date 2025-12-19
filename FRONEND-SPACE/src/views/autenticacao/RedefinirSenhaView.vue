@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import api from '@/services/api'; // <--- IMPORTAÇÃO
+import api from '@/services/api'; 
 
 const route = useRoute();
 const router = useRouter();
@@ -9,6 +9,7 @@ const token = ref(null);
 const novaSenha = ref('');
 const erro = ref(null);
 const sucesso = ref(null);
+const loading = ref(false);
 
 onMounted(() => {
   token.value = route.query.token;
@@ -16,62 +17,60 @@ onMounted(() => {
 });
 
 async function redefinir() {
+  loading.value = true;
+  erro.value = null;
+  
   try {
-    await api.post('/auth/resetar-senha', {
+    await api.post('/api/auth/reset-password', {
       token: token.value,
       newPassword: novaSenha.value
     });
-    sucesso.value = 'Senha alterada! Redirecionando...';
+    sucesso.value = 'Senha alterada com sucesso! Redirecionando...';
     setTimeout(() => router.push('/login'), 3000);
   } catch (e) {
-    erro.value = 'Erro ao redefinir senha.';
+    erro.value = 'Erro ao redefinir senha. O link pode ter expirado.';
+  } finally {
+    loading.value = false;
   }
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#FFF9F4] flex items-center justify-center px-4 font-nunito relative overflow-hidden">
+  <div class="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4 font-sans">
     
-    <div class="absolute top-10 left-10 text-5xl opacity-80 animate-float-slow">🔒</div>
-    <div class="absolute bottom-20 right-10 text-4xl opacity-70 animate-bounce-slow">✨</div>
-
-    <div class="bg-white p-8 rounded-[50px] shadow-[0_20px_50px_-12px_rgba(167,139,250,0.25)] w-full max-w-md border-4 border-white text-center relative z-10 transition-all">
+    <div class="bg-white p-10 rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 w-full max-w-md text-center">
       
-      <h1 class="text-2xl font-extrabold text-[#A78BFA] mb-6" style="font-family: 'Nunito', sans-serif;">Criar Nova Senha</h1>
+      <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm">
+        ✨
+      </div>
+
+      <h1 class="text-2xl font-bold text-[#0F172A] mb-6">Nova Senha</h1>
       
       <form v-if="token && !sucesso" @submit.prevent="redefinir" class="space-y-6">
-        <div class="relative">
-          <input 
-            type="password" 
-            v-model="novaSenha" 
-            required 
-            placeholder="Nova senha segura"
-            class="w-full px-6 py-4 rounded-[20px] bg-[#F9FAFB] border-2 border-transparent focus:bg-white focus:border-[#A78BFA] outline-none font-bold text-gray-600 placeholder-gray-300 transition-all shadow-inner"
-          >
-          <span class="absolute right-4 top-4 text-xl opacity-50">🛡️</span>
-        </div>
+        <input 
+          type="password" 
+          v-model="novaSenha" 
+          required 
+          placeholder="Digite sua nova senha"
+          class="w-full px-5 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-[#DB2777] text-[#0F172A] font-medium transition-all placeholder-gray-400"
+        >
         
         <button 
           type="submit" 
-          class="w-full bg-gradient-to-r from-[#C4B5FD] to-[#A78BFA] hover:to-[#8B5CF6] text-white font-extrabold py-4 rounded-[20px] shadow-lg shadow-purple-200 transform active:scale-[0.98] transition-all text-lg"
+          :disabled="loading"
+          class="w-full bg-[#DB2777] text-white font-bold py-4 rounded-2xl shadow-lg shadow-pink-500/30 hover:brightness-105 transition-all uppercase tracking-wider text-sm disabled:opacity-50"
         >
-          Salvar Nova Senha
+          {{ loading ? 'SALVANDO...' : 'SALVAR NOVA SENHA' }}
         </button>
       </form>
 
-      <div v-if="sucesso" class="p-4 bg-green-50 text-green-600 rounded-[20px] font-bold border border-green-100 shadow-sm animate-fade-in">{{ sucesso }}</div>
-      <div v-if="erro" class="p-4 bg-red-50 text-red-500 rounded-[20px] font-bold border border-red-100 shadow-sm animate-shake">{{ erro }}</div>
+      <div v-if="sucesso" class="p-4 bg-green-50 text-green-600 rounded-2xl font-bold text-sm border border-green-100 animate-pulse">
+        {{ sucesso }}
+      </div>
+      
+      <div v-if="erro" class="p-4 bg-red-50 text-red-500 rounded-2xl font-bold text-sm border border-red-100">
+        {{ erro }}
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.font-nunito { font-family: 'Nunito', sans-serif; }
-@keyframes floatSlow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
-.animate-float-slow { animation: floatSlow 4s ease-in-out infinite; }
-.animate-bounce-slow { animation: floatSlow 3s ease-in-out infinite; }
-.animate-shake { animation: shake 0.3s ease-in-out; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-</style>

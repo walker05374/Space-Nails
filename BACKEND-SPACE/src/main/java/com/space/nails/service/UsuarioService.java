@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -63,7 +64,7 @@ public class UsuarioService {
                 .build();
     }
 
-    // Método usado pelo Admin para criar novos profissionais
+    // Criar profissionais via Admin ou Registro
     public UsuarioDTO criarProfissional(RegisterRequestDTO request) {
         if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("E-mail já cadastrado!");
@@ -77,7 +78,7 @@ public class UsuarioService {
                 .role(Usuario.Role.PROFISSIONAL)
                 .fotoUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "https://i.pravatar.cc/150")
                 .ativo(true)
-                .dataValidade(LocalDate.now().plusDays(30)) // Padrão inicial de 30 dias
+                .dataValidade(LocalDate.now().plusDays(30)) // Validade inicial 30 dias
                 .build();
 
         usuarioRepository.save(novoProfissional);
@@ -111,7 +112,6 @@ public class UsuarioService {
         Usuario user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
         
-        // PROTEÇÃO: Impede desativar Administradores
         if (user.getRole() == Usuario.Role.ADMIN) {
             throw new RuntimeException("Não é permitido desativar um administrador.");
         }
@@ -124,12 +124,46 @@ public class UsuarioService {
         Usuario user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
 
-        // PROTEÇÃO: Impede excluir Administradores
         if (user.getRole() == Usuario.Role.ADMIN) {
             throw new RuntimeException("Não é permitido excluir um administrador.");
         }
 
         usuarioRepository.deleteById(id);
+    }
+
+    // --- MÉTODOS DE RECUPERAÇÃO DE SENHA (CORREÇÃO DO ERRO) ---
+
+    public void requestPasswordReset(String email) {
+        Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
+        
+        // Se o usuário não existir, não fazemos nada por segurança (ou lançamos erro genérico)
+        if (userOpt.isPresent()) {
+            Usuario user = userOpt.get();
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            usuarioRepository.save(user);
+
+            // Link do Frontend para redefinir
+            String link = "http://localhost:5173/redefinir-senha?token=" + token;
+            
+            String assunto = "Recuperação de Senha - Space Nails";
+            String corpo = "Olá, " + user.getNome() + "!\n\n" +
+                           "Você solicitou a redefinição de senha.\n" +
+                           "Clique no link abaixo para criar uma nova senha:\n\n" +
+                           link + "\n\n" +
+                           "Se não foi você, ignore este e-mail.";
+
+            emailService.sendEmail(user.getEmail(), assunto, corpo);
+        }
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        Usuario user = usuarioRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Token inválido ou expirado."));
+
+        user.setSenha(passwordEncoder.encode(newPassword));
+        user.setResetToken(null); // Limpa o token para não ser usado novamente
+        usuarioRepository.save(user);
     }
 
     public List<UsuarioDTO> listarTodos() {
@@ -150,6 +184,4 @@ public class UsuarioService {
                 .dataValidade(user.getDataValidade())
                 .build();
     }
-
-    // Métodos de recuperação de senha omitidos para brevidade, mas devem permanecer no seu arquivo
 }

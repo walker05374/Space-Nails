@@ -6,84 +6,51 @@ import AvatarSelectorModal from '@/components/AvatarSelectorModal.vue';
 
 const router = useRouter();
 
-// Estado do Modal de Avatar
+// Estados
 const mostrarSeletorAvatar = ref(false);
 const quemEstaSelecionando = ref(null);
-
-// Estado dos Termos de Uso
 const aceitouTermos = ref(false);
 const mostrarModalTermos = ref(false);
+const erro = ref(null);
+const isSubmitting = ref(false);
 
-// Dados do Profissional (Usuario)
+// Dados
 const nome = ref('');
 const email = ref('');
 const telefone = ref('');
 const password = ref('');
 const confirmarSenha = ref('');
-const avatarUrl = ref('https://api.dicebear.com/7.x/micah/svg?seed=Profissional&backgroundColor=f3e8ff'); 
-
-// Controle de Senha
+const avatarUrl = ref('https://api.dicebear.com/7.x/micah/svg?seed=Nails&backgroundColor=fce7f3'); 
 const mostrarSenha = ref(false);
-const mostrarConfirmar = ref(false);
 
-// Dados dos Clientes Iniciais
-const clientes = ref([
-  { nome: '', telefone: '', observacoes: '' }
-]);
+const clientes = ref([{ nome: '', telefone: '', observacoes: '' }]);
 
-const erro = ref(null);
-const isSubmitting = ref(false);
-
-// --- Lógica de Avatar ---
 function abrirSeletor(tipo, index = null) {
   quemEstaSelecionando.value = { tipo, index };
   mostrarSeletorAvatar.value = true;
 }
 
 function salvarAvatarSelecionado(url) {
-  const { tipo, index } = quemEstaSelecionando.value;
-  if (tipo === 'PROFISSIONAL') {
+  if (quemEstaSelecionando.value.tipo === 'PROFISSIONAL') {
     avatarUrl.value = url;
   }
   mostrarSeletorAvatar.value = false;
 }
 
-function adicionarCliente() {
-  clientes.value.push({ nome: '', telefone: '', observacoes: '' });
-}
-
-function removerCliente(index) {
-  if (clientes.value.length > 1) {
-    clientes.value.splice(index, 1);
-  }
-}
+function adicionarCliente() { clientes.value.push({ nome: '', telefone: '', observacoes: '' }); }
+function removerCliente(index) { if (clientes.value.length > 1) clientes.value.splice(index, 1); }
 
 async function registrar() {
   erro.value = null;
-
-  if (!aceitouTermos.value) {
-    erro.value = "Você precisa aceitar os Termos de Uso.";
-    return;
-  }
-
-  // Validação de Senha Forte
-  const temTamanho = password.value.length >= 8;
-  const temMaiuscula = /[A-Z]/.test(password.value);
-  const temNumero = /[0-9]/.test(password.value);
-  if (!temTamanho || !temMaiuscula || !temNumero) {
-    erro.value = 'A senha deve conter no mínimo 8 caracteres, uma letra maiúscula e um número.';
-    return;
-  }
+  if (!aceitouTermos.value) return erro.value = "Necessário aceitar os Termos.";
   
-  if (password.value !== confirmarSenha.value) { 
-    erro.value = "As senhas não coincidem!"; 
-    return; 
-  }
+  // Validação Simplificada para UX (pode manter a regex forte se desejar)
+  if (password.value.length < 6) return erro.value = 'A senha deve ter no mínimo 6 caracteres.';
+  if (password.value !== confirmarSenha.value) return erro.value = "As senhas não coincidem."; 
 
   isSubmitting.value = true;
   
   try {
-    // 1. Criar Profissional (Baseado no RegisterRequestDTO)
     await api.post('/auth/register', {
       nome: nome.value,
       email: email.value,
@@ -92,32 +59,20 @@ async function registrar() {
       avatarUrl: avatarUrl.value
     });
     
-    // 2. Login automático para obter o token e criar os clientes
-    const loginResponse = await api.post('/api/auth/login', {
-      email: email.value,
-      password: password.value
-    });
-    
-    const token = loginResponse.data.token;
-    // Salva o token temporariamente para as próximas requisições
-    const config = { headers: { Authorization: `Bearer ${token}` } };
+    // Login automático e criação de clientes mantidos
+    const loginResponse = await api.post('/api/auth/login', { email: email.value, password: password.value });
+    const config = { headers: { Authorization: `Bearer ${loginResponse.data.token}` } };
 
-    // 3. Criar Clientes (Baseado no ClienteController)
     for (const cliente of clientes.value) {
       if (cliente.nome) {
-        await api.post('/api/clientes', {
-          nome: cliente.nome,
-          telefone: cliente.telefone,
-          observacoes: cliente.observacoes
-        }, config);
+        await api.post('/api/clientes', cliente, config);
       }
     }
     
-    alert('Conta criada com sucesso! ✨ Bem-vinda ao Space Nails.');
+    alert('Cadastro realizado com sucesso!');
     router.push('/login');
-
   } catch (e) {
-    erro.value = e.response?.data?.message || 'Erro ao criar conta. Verifique os dados.';
+    erro.value = e.response?.data?.message || 'Erro ao criar conta.';
   } finally {
     isSubmitting.value = false;
   }
@@ -125,126 +80,106 @@ async function registrar() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0F071D] py-10 px-4 font-sans flex items-center justify-center relative overflow-hidden">
+  <div class="min-h-screen bg-brand-bg py-10 px-4 font-sans flex items-center justify-center">
     
-    <div class="absolute top-10 left-10 text-4xl animate-pulse opacity-40">⭐</div>
-    <div class="absolute bottom-20 right-20 text-4xl animate-bounce opacity-30">🚀</div>
-
-    <div class="bg-[#1A1128] p-8 rounded-[40px] shadow-[0_20px_50px_rgba(139,92,246,0.3)] w-full max-w-lg border border-purple-500/30 relative z-10">
-      
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-extrabold text-white mb-1">
-          <span class="text-purple-400">Space</span> Nails
-        </h1>
-        <p class="text-purple-300/60 text-sm font-medium">Cadastre seu perfil profissional</p>
-      </div>
-
-      <form @submit.prevent="registrar" class="space-y-6">
+    <div class="w-full max-w-2xl bg-white rounded-3xl shadow-float border border-gray-100 overflow-hidden">
+      <div class="p-8 md:p-12">
         
-        <div class="bg-purple-900/10 p-6 rounded-[30px] border border-purple-500/20 shadow-inner">
-          <h3 class="text-purple-400 font-bold text-center mb-6 border-b border-purple-500/20 pb-2 uppercase text-xs tracking-widest">
-            ✨ Seus Dados
-          </h3>
+        <div class="text-center mb-10">
+          <h1 class="text-2xl font-bold text-brand-dark">Crie sua conta</h1>
+          <p class="text-brand-gray text-sm mt-2">Comece a organizar seu negócio hoje.</p>
+        </div>
+
+        <form @submit.prevent="registrar" class="space-y-8">
           
-          <div class="flex flex-col items-center mb-6">
-            <div class="cursor-pointer group relative" @click="abrirSeletor('PROFISSIONAL')">
-              <div class="w-24 h-24 rounded-full border-2 border-purple-500 overflow-hidden bg-purple-900/30">
-                <img :src="avatarUrl" class="w-full h-full object-cover">
+          <div class="space-y-6">
+            <div class="flex flex-col items-center">
+              <div class="relative group cursor-pointer" @click="abrirSeletor('PROFISSIONAL')">
+                <img :src="avatarUrl" class="w-24 h-24 rounded-full border-4 border-gray-50 shadow-sm object-cover bg-gray-50">
+                <div class="absolute bottom-0 right-0 bg-brand-dark text-white p-2 rounded-full shadow-md hover:bg-brand-primary transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
               </div>
-              <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-full">
-                Trocar
-              </div>
+              <span class="text-xs font-bold text-gray-400 mt-2 uppercase">Foto de Perfil</span>
             </div>
-          </div>
 
-          <div class="space-y-4">
-            <input type="text" v-model="nome" required class="input-space" placeholder="Seu Nome Completo">
-            <input type="email" v-model="email" required class="input-space" placeholder="Seu E-mail">
-            <input type="text" v-model="telefone" required class="input-space" placeholder="Telefone (ex: 11999999999)">
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="relative">
-                <input :type="mostrarSenha ? 'text' : 'password'" v-model="password" required class="input-space pr-10" placeholder="Senha">
-                <button type="button" @click="mostrarSenha = !mostrarSenha" class="absolute right-3 top-3 text-purple-300">
-                  {{ mostrarSenha ? '🙈' : '👁️' }}
-                </button>
-              </div>
-              <div class="relative">
-                <input :type="mostrarConfirmar ? 'text' : 'password'" v-model="confirmarSenha" required class="input-space pr-10" placeholder="Confirmar">
-                <button type="button" @click="mostrarConfirmar = !mostrarConfirmar" class="absolute right-3 top-3 text-purple-300">
-                  {{ mostrarConfirmar ? '🙈' : '👁️' }}
-                </button>
-              </div>
+            <div class="grid md:grid-cols-2 gap-4">
+              <input type="text" v-model="nome" required class="input-modern" placeholder="Nome Completo">
+              <input type="text" v-model="telefone" required class="input-modern" placeholder="WhatsApp">
             </div>
-          </div>
-        </div>
-
-        <div class="bg-white/5 p-6 rounded-[30px] border border-white/10 relative">
-          <h3 class="text-white font-bold text-center mb-6 text-xs uppercase tracking-widest">
-            💅 Meus Primeiros Clientes
-          </h3>
-
-          <div v-for="(cliente, index) in clientes" :key="index" class="mb-4 space-y-3 relative pb-4 border-b border-white/5 last:border-0">
-            <button v-if="clientes.length > 1" type="button" @click="removerCliente(index)" class="absolute right-0 -top-2 text-red-400 text-[10px] font-bold">REMOVER</button>
+            <input type="email" v-model="email" required class="input-modern w-full" placeholder="Seu melhor e-mail">
             
-            <input type="text" v-model="cliente.nome" class="input-space text-sm" placeholder="Nome do Cliente">
-            <div class="grid grid-cols-2 gap-2">
-              <input type="text" v-model="cliente.telefone" class="input-space text-xs" placeholder="WhatsApp">
-              <input type="text" v-model="cliente.observacoes" class="input-space text-xs" placeholder="Obs (opcional)">
+            <div class="grid md:grid-cols-2 gap-4">
+              <input :type="mostrarSenha ? 'text' : 'password'" v-model="password" required class="input-modern" placeholder="Senha">
+              <input :type="mostrarSenha ? 'text' : 'password'" v-model="confirmarSenha" required class="input-modern" placeholder="Confirmar Senha">
             </div>
           </div>
 
-          <button type="button" @click="adicionarCliente" class="w-full mt-2 py-2 border border-dashed border-purple-500/40 text-purple-400 text-xs font-bold rounded-xl hover:bg-purple-500/10 transition-all">
-            + Adicionar outro cliente
+          <hr class="border-gray-100">
+
+          <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+            <h3 class="text-sm font-bold text-brand-dark uppercase tracking-wide mb-4">Adicionar Primeiros Clientes (Opcional)</h3>
+            
+            <div v-for="(cliente, index) in clientes" :key="index" class="mb-4 pb-4 border-b border-gray-200 last:border-0 relative">
+              <button v-if="clientes.length > 1" type="button" @click="removerCliente(index)" class="absolute right-0 top-0 text-red-400 text-xs font-bold hover:text-red-600">Excluir</button>
+              
+              <div class="grid gap-3">
+                <input type="text" v-model="cliente.nome" class="input-modern bg-white" placeholder="Nome da Cliente">
+                <div class="grid grid-cols-2 gap-3">
+                  <input type="text" v-model="cliente.telefone" class="input-modern bg-white text-xs" placeholder="WhatsApp">
+                  <input type="text" v-model="cliente.observacoes" class="input-modern bg-white text-xs" placeholder="Obs">
+                </div>
+              </div>
+            </div>
+
+            <button type="button" @click="adicionarCliente" class="w-full py-3 border-2 border-dashed border-gray-300 text-gray-500 rounded-xl text-xs font-bold hover:border-brand-primary hover:text-brand-primary transition-all">
+              + Adicionar Outra Cliente
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="termos" v-model="aceitouTermos" class="w-5 h-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary">
+            <label for="termos" class="text-xs text-gray-500 font-medium">
+              Li e aceito os <span @click.prevent="mostrarModalTermos = true" class="text-brand-dark underline cursor-pointer font-bold">Termos de Uso</span>.
+            </label>
+          </div>
+
+          <div v-if="erro" class="text-red-500 text-xs font-bold text-center bg-red-50 p-3 rounded-xl border border-red-100">{{ erro }}</div>
+
+          <button type="submit" :disabled="isSubmitting" class="w-full bg-brand-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-primary/20 hover:brightness-105 transition-all disabled:opacity-50">
+            {{ isSubmitting ? 'Cadastrando...' : 'Finalizar Cadastro' }}
           </button>
-        </div>
 
-        <div class="flex items-center gap-3 px-2">
-          <input type="checkbox" id="termos" v-model="aceitouTermos" class="rounded border-purple-500 bg-transparent text-purple-600 focus:ring-purple-500">
-          <label for="termos" class="text-xs text-purple-200/70">
-            Aceito os <span @click.prevent="mostrarModalTermos = true" class="text-purple-400 underline cursor-pointer">Termos de Uso</span>.
-          </label>
-        </div>
-
-        <div v-if="erro" class="text-red-400 text-xs text-center font-bold bg-red-900/20 p-3 rounded-2xl border border-red-500/20">{{ erro }}</div>
-
-        <button type="submit" :disabled="isSubmitting" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50">
-          {{ isSubmitting ? 'ESTRELA EM ÓRBITA...' : 'FINALIZAR CADASTRO ✨' }}
-        </button>
-      </form>
-      
-      <div class="mt-8 text-center">
-        <router-link to="/login" class="text-purple-300/50 hover:text-purple-300 text-xs font-bold transition-colors">
-          JÁ TENHO UMA NAVE? <span class="underline">FAZER LOGIN</span>
-        </router-link>
+          <p class="text-center text-xs text-gray-400 font-bold">
+            Já tem conta? <router-link to="/login" class="text-brand-primary hover:underline">Fazer Login</router-link>
+          </p>
+        </form>
       </div>
     </div>
-
+    
     <AvatarSelectorModal v-if="mostrarSeletorAvatar" @close="mostrarSeletorAvatar = false" @select="salvarAvatarSelecionado" />
 
-    <div v-if="mostrarModalTermos" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-[#1A1128] rounded-[30px] border border-purple-500/30 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-        <div class="p-6 border-b border-purple-500/20 flex justify-between items-center bg-purple-900/10">
-          <h3 class="text-xl font-bold text-purple-400">📜 Regras da Galáxia</h3>
-          <button @click="mostrarModalTermos = false" class="text-purple-300 hover:text-white font-bold text-xl">✕</button>
+    <div v-if="mostrarModalTermos" class="fixed inset-0 bg-brand-dark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+          <h3 class="font-bold text-brand-dark">Termos de Uso</h3>
+          <button @click="mostrarModalTermos = false" class="text-gray-400 hover:text-gray-600">✕</button>
         </div>
-        <div class="p-8 overflow-y-auto text-purple-200/80 text-sm space-y-4">
-          <p>1. Seus dados serão usados para gestão de agendamentos.</p>
-          <p>2. Os dados dos clientes são de sua responsabilidade exclusiva.</p>
-          <p class="text-xs italic text-purple-500 mt-4">Space Nails - 2025.</p>
+        <div class="p-6 text-sm text-gray-600 space-y-4">
+          <p>1. O uso da plataforma é exclusivo para gestão de serviços de beleza.</p>
+          <p>2. Seus dados e os de seus clientes são confidenciais.</p>
         </div>
-        <div class="p-6 border-t border-purple-500/20 bg-purple-900/10 text-right">
-          <button @click="aceitouTermos = true; mostrarModalTermos = false" class="bg-purple-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-purple-700 transition-all">
-            CONCORDO
-          </button>
+        <div class="p-6 bg-gray-50 text-right">
+          <button @click="aceitouTermos = true; mostrarModalTermos = false" class="bg-brand-dark text-white font-bold px-6 py-2 rounded-xl text-sm">Concordo</button>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <style scoped>
-.input-space {
-  @apply w-full px-4 py-3 rounded-2xl bg-white/5 border border-purple-500/20 focus:border-purple-500 focus:bg-white/10 outline-none transition-all text-white placeholder-purple-300/30 font-medium;
+.input-modern {
+  @apply w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-brand-primary/50 focus:ring-2 focus:ring-brand-primary/10 outline-none transition-all text-brand-dark placeholder-gray-400 font-medium text-sm;
 }
 </style>
