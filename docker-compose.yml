@@ -5,18 +5,16 @@ services:
     container_name: cantinho_backend
     image: cantinho_backend:latest
     build: 
-      # CORREÇÃO: Caminho da pasta ajustado para o nome real do diretório
       context: ./BACKEND-SPACE
       dockerfile: Dockerfile
     environment:
       - PORT=8080
-      # Conexão interna com o container 'db'
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cantinho_db
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/space_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=minhasenha123 
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      # URL pública (necessária para links de e-mail, etc)
-      - FRONTEND_URL=https://cantinhodosaber.online
+      # URL do Frontend para CORS no backend (se necessário)
+      - FRONTEND_URL=https:####################
     depends_on:
       - db
     networks:
@@ -27,14 +25,13 @@ services:
     container_name: cantinho_frontend
     image: cantinho_frontend:latest
     build:
-      # CORREÇÃO: Caminho da pasta ajustado (mantendo o nome 'FRONEND-SPACE' conforme seus arquivos)
       context: ./FRONEND-SPACE
       dockerfile: Dockerfile
       args:
-        # Define a URL da API para o build do Vue
-        VITE_API_URL: https://cantinhodosaber.online
+        # IMPORTANTE: Definir como "/" faz o axios usar o mesmo domínio do site.
+        # O Nginx (neste container) vai pegar essas requisições e passar pro backend.
+        VITE_API_URL: /
     ports:
-      # Expondo a porta 3000 (externa) para a 80 (interna do Nginx)
       - "3000:80"
     depends_on:
       - app
@@ -47,11 +44,10 @@ services:
     image: postgres:15
     restart: always
     environment:
-      - POSTGRES_DB=cantinho_db
+      - POSTGRES_DB=space_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=minhasenha123 
     ports:
-      # Porta do banco exposta apenas se precisar de acesso externo (DBeaver, etc)
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
