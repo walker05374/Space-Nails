@@ -1,76 +1,50 @@
 package com.space.nails.config;
 
+import com.space.nails.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import com.space.nails.security.JwtAuthFilter;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // Permite usar @PreAuthorize nos controllers
 public class SecurityConfig {
 
-    private final AuthenticationProvider authenticationProvider;
     private final JwtAuthFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
 
-    public SecurityConfig(AuthenticationProvider authenticationProvider, JwtAuthFilter jwtAuthFilter) {
-        this.authenticationProvider = authenticationProvider;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthenticationProvider authenticationProvider) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.authenticationProvider = authenticationProvider;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            // IMPORTANTE: Usa a configuração de CORS definida abaixo
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(authorize -> authorize
-                // Rotas Públicas (Login, Cadastro, Health Check, Imagens)
-                .requestMatchers("/auth/**", "/api/health", "/uploads/**").permitAll()
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                // ROTAS PÚBLICAS (Apenas Login e Recuperação)
+                .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 
-                // Rotas de Admin (Aceita tanto 'ADMIN' quanto 'ADMINISTRADOR' para evitar erros)
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "ADMINISTRADOR")
+                // ROTAS DE SAÚDE/CONFIG (Opcional)
+                .requestMatchers("/actuator/**", "/health").permitAll()
                 
-                // Rotas de Responsável
-                .requestMatchers("/api/responsavel/**").hasRole("RESPONSAVEL")
-                
-                // Rotas de Diário (Crianças/Pais)
-                .requestMatchers("/api/diario/**").authenticated() 
-                
-                // Qualquer outra requisição precisa estar logada
+                // ROTAS ADMINISTRATIVAS (Criação de usuários)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // TODO O RESTO (Exige Login)
                 .anyRequest().authenticated()
             )
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // --- CORREÇÃO DE CORS (O "SITE BUGADO") ---
-        // Permite qualquer origem, cabeçalho e método.
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }
