@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: cantinho_backend
+    image: cantinho_backend:latest
+    build: 
+      context: ./BACKEND-CANTINHO_EMOCOES
+      dockerfile: Dockerfile
+    # Não expomos a porta 8080 para fora (segurança), pois o Nginx interno (web) fará o proxy.
+    # Se precisar testar direto sem passar pelo frontend, descomente a linha abaixo.
+    # ports:
+    #   - "8080:8080"
+    environment:
+      - PORT=8080
+      # Usa o nome do serviço do banco de dados definido abaixo (db)
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cantinho_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=minhasenha123 
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FRONTEND_URL=https://cantinhodosaber.online
+    depends_on:
+      - db
+    networks:
+      - cantinho-network
+    restart: always
+
+  web:
+    container_name: cantinho_frontend
+    image: cantinho_frontend:latest
+    build:
+      context: ./FRONTEND-CANTINHO_EMOCOES
+      dockerfile: Dockerfile
+      args:
+        # A URL pública da API
+        VITE_API_URL: https://cantinhodosaber.online
+    ports:
+      # Mapeia a porta 3000 do VPS para a porta 80 do container Nginx
+      - "3000:80"
+    depends_on:
+      - app
+    networks:
+      - cantinho-network
+    restart: always
+
+  db:
+    container_name: cantinho_db
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_DB=cantinho_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=minhasenha123 
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cantinho-network
+
+networks:
+  cantinho-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
