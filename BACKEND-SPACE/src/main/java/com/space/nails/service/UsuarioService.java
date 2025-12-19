@@ -3,7 +3,6 @@ package com.space.nails.service;
 import com.space.nails.dto.*;
 import com.space.nails.model.Usuario;
 import com.space.nails.repository.UsuarioRepository;
-import com.space.nails.service.ResourceNotFoundException;
 import com.space.nails.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +22,7 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final GmailEmailService emailService; // Certifique-se de ter este serviço criado
 
     // --- LOGIN ---
     public LoginResponseDTO login(LoginRequestDTO request) {
@@ -54,7 +55,7 @@ public class UsuarioService {
                 .email(request.getEmail())
                 .telefone(request.getTelefone())
                 .senha(passwordEncoder.encode(request.getPassword()))
-                .role(Usuario.Role.PROFISSIONAL) // Força ser Profissional
+                .role(Usuario.Role.PROFISSIONAL)
                 .fotoUrl(request.getAvatarUrl())
                 .build();
 
@@ -62,7 +63,7 @@ public class UsuarioService {
         return mapToDTO(novoProfissional);
     }
 
-    // --- ATUALIZAR DADOS (Pode ser usado pelo Admin ou pelo próprio User) ---
+    // --- ATUALIZAR DADOS (Genérico) ---
     public UsuarioDTO atualizarUsuario(Long id, UpdateUsuarioDTO request) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -70,7 +71,6 @@ public class UsuarioService {
         if (request.getNome() != null) usuario.setNome(request.getNome());
         if (request.getTelefone() != null) usuario.setTelefone(request.getTelefone());
         
-        // Troca de E-mail (verificar se já existe)
         if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
             if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
                 throw new RuntimeException("Este novo e-mail já está em uso.");
@@ -78,7 +78,6 @@ public class UsuarioService {
             usuario.setEmail(request.getEmail());
         }
 
-        // Troca de Senha
         if (request.getNovaSenha() != null && !request.getNovaSenha().isEmpty()) {
             usuario.setSenha(passwordEncoder.encode(request.getNovaSenha()));
         }
@@ -87,14 +86,39 @@ public class UsuarioService {
         return mapToDTO(usuario);
     }
 
-    // --- LISTAR TODOS (Para o Admin) ---
+    // --- RECUPERAÇÃO DE SENHA ---
+    public void requestPasswordReset(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("E-mail não encontrado"));
+
+        String token = UUID.randomUUID().toString();
+        usuario.setResetToken(token);
+        usuarioRepository.save(usuario);
+
+        // Envio de e-mail (ajuste a mensagem conforme necessário)
+        emailService.sendEmail(
+            usuario.getEmail(), 
+            "Recuperação de Senha", 
+            "Seu token de recuperação é: " + token
+        );
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        Usuario usuario = usuarioRepository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Token inválido"));
+
+        usuario.setSenha(passwordEncoder.encode(newPassword));
+        usuario.setResetToken(null); // Limpa o token após uso
+        usuarioRepository.save(usuario);
+    }
+
+    // --- LISTAGEM ---
     public List<UsuarioDTO> listarTodos() {
         return usuarioRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
-    // --- AUXILIAR ---
     private UsuarioDTO mapToDTO(Usuario user) {
         return UsuarioDTO.builder()
                 .id(user.getId())
@@ -105,6 +129,4 @@ public class UsuarioService {
                 .avatarUrl(user.getFotoUrl())
                 .build();
     }
-    
-    // (Adicione aqui métodos de esqueci a senha / resetar senha se necessário)
 }

@@ -20,50 +20,44 @@ public class ClienteController {
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
 
-    // Helper para pegar o usuário logado
     private Usuario getUsuarioLogado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return usuarioRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Usuário logado não encontrado no banco"));
+                .orElseThrow(() -> new RuntimeException("Usuário logado não encontrado"));
     }
 
-    // 1. Cadastrar Cliente (Vincula automaticamente ao profissional logado)
     @PostMapping
     public ResponseEntity<Cliente> criarCliente(@RequestBody Cliente cliente) {
         Usuario profissional = getUsuarioLogado();
-        cliente.setProfissional(profissional); // Vincula o cliente ao dono do login
+        cliente.setProfissional(profissional);
         return ResponseEntity.ok(clienteRepository.save(cliente));
     }
 
-    // 2. Listar Meus Clientes
     @GetMapping
     public ResponseEntity<List<Cliente>> listarMeusClientes() {
         Usuario profissional = getUsuarioLogado();
-        
-        // Se for ADMIN, talvez queira ver todos? Se sim, descomente abaixo:
-        // if (profissional.getRole() == Usuario.Role.ADMIN) return ResponseEntity.ok(clienteRepository.findAll());
-
-        // Retorna apenas os clientes deste profissional
+        // Se for ADMIN, pode ver todos (opcional)
+        if (profissional.getRole() == Usuario.Role.ADMIN) {
+            return ResponseEntity.ok(clienteRepository.findAll());
+        }
         return ResponseEntity.ok(clienteRepository.findByProfissional(profissional));
     }
 
-    // 3. Editar Cliente
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> editarCliente(@PathVariable Long id, @RequestBody Cliente dadosAtualizados) {
+    public ResponseEntity<Cliente> editarCliente(@PathVariable Long id, @RequestBody Cliente dados) {
         Usuario profissional = getUsuarioLogado();
-        
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
-        // Segurança: Verifica se o cliente pertence ao profissional logado (ou se é Admin)
+        // Bloqueia edição se o cliente não for do profissional (exceto Admin)
         if (!cliente.getProfissional().getId().equals(profissional.getId()) 
             && profissional.getRole() != Usuario.Role.ADMIN) {
-            throw new RuntimeException("Acesso negado: Este cliente não é seu.");
+            throw new RuntimeException("Acesso negado.");
         }
 
-        cliente.setNome(dadosAtualizados.getNome());
-        cliente.setTelefone(dadosAtualizados.getTelefone());
-        cliente.setObservacoes(dadosAtualizados.getObservacoes());
+        cliente.setNome(dados.getNome());
+        cliente.setTelefone(dados.getTelefone());
+        cliente.setObservacoes(dados.getObservacoes());
         
         return ResponseEntity.ok(clienteRepository.save(cliente));
     }

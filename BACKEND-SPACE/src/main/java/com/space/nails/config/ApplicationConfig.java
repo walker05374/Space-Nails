@@ -11,7 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.space.nails.repository.UsuarioRepository;
+import com.space.nails.repository.ClienteRepository;
 
 @Configuration
 
@@ -26,7 +26,7 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> usuarioRepository.findByEmail(username)
+        return username -> ClienteRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
     }
 

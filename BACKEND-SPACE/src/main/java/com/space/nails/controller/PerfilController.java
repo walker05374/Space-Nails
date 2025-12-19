@@ -21,12 +21,10 @@ public class PerfilController {
 
     @PutMapping("/me")
     public ResponseEntity<UsuarioDTO> atualizarMeuPerfil(@RequestBody UpdateUsuarioDTO request) {
-        // Descobre quem está logado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Usuario usuario = usuarioRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Erro de autenticação"));
+                .orElseThrow(() -> new RuntimeException("Usuário logado não encontrado"));
 
-        // Chama o serviço passando o ID do próprio usuário logado
         return ResponseEntity.ok(usuarioService.atualizarUsuario(usuario.getId(), request));
     }
 }

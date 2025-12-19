@@ -1,7 +1,9 @@
 package com.space.nails.controller;
 
+import com.space.nails.dto.ForgotPasswordRequest;
 import com.space.nails.dto.LoginRequestDTO;
 import com.space.nails.dto.LoginResponseDTO;
+import com.space.nails.dto.ResetPasswordRequest;
 import com.space.nails.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,16 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(usuarioService.login(request));
     }
-    
-    // Endpoints de forgot-password e reset-password ficariam aqui
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        usuarioService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok("Se o e-mail existir, um token foi enviado.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        usuarioService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok("Senha redefinida com sucesso.");
+    }
 }

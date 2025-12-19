@@ -31,12 +31,14 @@ public class Usuario implements UserDetails {
 
     private String senha;
     private String telefone;
-    private String fotoUrl; // Para o Avatar
+    private String fotoUrl;
+
+    // Campos para recuperação de senha
+    private String resetToken;
 
     @Enumerated(EnumType.STRING)
-    private Role role; // ADMIN ou PROFISSIONAL
+    private Role role;
 
-    // Enum interno para facilitar
     public enum Role {
         ADMIN,
         PROFISSIONAL
@@ -61,3 +63,4 @@ public class Usuario implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
     @Override
     public boolean isEnabled() { return true; }
+}

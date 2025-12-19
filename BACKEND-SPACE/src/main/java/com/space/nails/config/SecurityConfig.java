@@ -13,7 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Permite usar @PreAuthorize nos controllers
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -29,17 +29,10 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // ROTAS PÚBLICAS (Apenas Login e Recuperação)
-                .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
-                
-                // ROTAS DE SAÚDE/CONFIG (Opcional)
+                .requestMatchers("/api/auth/**").permitAll() // Login, Forgot, Reset
                 .requestMatchers("/actuator/**", "/health").permitAll()
-                
-                // ROTAS ADMINISTRATIVAS (Criação de usuários)
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                // TODO O RESTO (Exige Login)
-                .anyRequest().authenticated()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // Só Admin cria profissionais
+                .anyRequest().authenticated() // Resto precisa de login
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider)
