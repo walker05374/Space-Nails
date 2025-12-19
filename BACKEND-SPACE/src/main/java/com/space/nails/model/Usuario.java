@@ -6,6 +6,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "usuarios")
@@ -27,11 +28,14 @@ public class Usuario implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    private boolean ativo = true; 
+    private LocalDate dataValidade; 
+
     public enum Role { ADMIN, PROFISSIONAL }
 
     public Usuario() {}
 
-    public Usuario(Long id, String nome, String email, String senha, String telefone, String fotoUrl, String resetToken, Role role) {
+    public Usuario(Long id, String nome, String email, String senha, String telefone, String fotoUrl, String resetToken, Role role, boolean ativo, LocalDate dataValidade) {
         this.id = id;
         this.nome = nome;
         this.email = email;
@@ -40,6 +44,8 @@ public class Usuario implements UserDetails {
         this.fotoUrl = fotoUrl;
         this.resetToken = resetToken;
         this.role = role;
+        this.ativo = ativo;
+        this.dataValidade = dataValidade;
     }
 
     // --- BUILDER MANUAL ---
@@ -54,6 +60,8 @@ public class Usuario implements UserDetails {
         private String fotoUrl;
         private String resetToken;
         private Role role;
+        private boolean ativo = true;
+        private LocalDate dataValidade;
 
         public UsuarioBuilder id(Long id) { this.id = id; return this; }
         public UsuarioBuilder nome(String nome) { this.nome = nome; return this; }
@@ -63,9 +71,11 @@ public class Usuario implements UserDetails {
         public UsuarioBuilder fotoUrl(String fotoUrl) { this.fotoUrl = fotoUrl; return this; }
         public UsuarioBuilder resetToken(String resetToken) { this.resetToken = resetToken; return this; }
         public UsuarioBuilder role(Role role) { this.role = role; return this; }
+        public UsuarioBuilder ativo(boolean ativo) { this.ativo = ativo; return this; }
+        public UsuarioBuilder dataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; return this; }
 
         public Usuario build() {
-            return new Usuario(id, nome, email, senha, telefone, fotoUrl, resetToken, role);
+            return new Usuario(id, nome, email, senha, telefone, fotoUrl, resetToken, role, ativo, dataValidade);
         }
     }
 
@@ -86,6 +96,10 @@ public class Usuario implements UserDetails {
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public LocalDate getDataValidade() { return dataValidade; }
+    public void setDataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

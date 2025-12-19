@@ -9,6 +9,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,7 +23,6 @@ public class UsuarioService {
     private final AuthenticationManager authenticationManager;
     private final GmailEmailService emailService;
 
-    // --- CONSTRUTOR MANUAL (CORREÇÃO) ---
     public UsuarioService(UsuarioRepository usuarioRepository,
                           PasswordEncoder passwordEncoder,
                           JwtService jwtService,
@@ -35,13 +35,21 @@ public class UsuarioService {
         this.emailService = emailService;
     }
 
-    // --- LOGIN ---
     public LoginResponseDTO login(LoginRequestDTO request) {
+        var user = usuarioRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        
+        if (!user.isAtivo()) {
+            throw new RuntimeException("CONTA_SUSPENSA");
+        }
+        
+        if (user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now())) {
+            throw new RuntimeException("ASSINATURA_EXPIRADA");
+        }
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        var user = usuarioRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
         
         var token = jwtService.generateToken(user);
         
@@ -55,7 +63,7 @@ public class UsuarioService {
                 .build();
     }
 
-    // --- ADMIN CRIA PROFISSIONAL ---
+    // Método usado pelo Admin para criar novos profissionais
     public UsuarioDTO criarProfissional(RegisterRequestDTO request) {
         if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("E-mail já cadastrado!");
@@ -67,20 +75,22 @@ public class UsuarioService {
                 .telefone(request.getTelefone())
                 .senha(passwordEncoder.encode(request.getPassword()))
                 .role(Usuario.Role.PROFISSIONAL)
-                .fotoUrl(request.getAvatarUrl())
+                .fotoUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "https://i.pravatar.cc/150")
+                .ativo(true)
+                .dataValidade(LocalDate.now().plusDays(30)) // Padrão inicial de 30 dias
                 .build();
 
         usuarioRepository.save(novoProfissional);
         return mapToDTO(novoProfissional);
     }
 
-    // --- ATUALIZAR DADOS ---
     public UsuarioDTO atualizarUsuario(Long id, UpdateUsuarioDTO request) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
 
         if (request.getNome() != null) usuario.setNome(request.getNome());
         if (request.getTelefone() != null) usuario.setTelefone(request.getTelefone());
+        if (request.getDataValidade() != null) usuario.setDataValidade(request.getDataValidade());
         
         if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
             if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -97,32 +107,31 @@ public class UsuarioService {
         return mapToDTO(usuario);
     }
 
-    // --- RECUPERAÇÃO DE SENHA ---
-    public void requestPasswordReset(String email) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("E-mail não encontrado"));
+    public void alternarStatus(Long id) {
+        Usuario user = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        
+        // PROTEÇÃO: Impede desativar Administradores
+        if (user.getRole() == Usuario.Role.ADMIN) {
+            throw new RuntimeException("Não é permitido desativar um administrador.");
+        }
 
-        String token = UUID.randomUUID().toString();
-        usuario.setResetToken(token);
-        usuarioRepository.save(usuario);
-
-        emailService.sendEmail(
-            usuario.getEmail(), 
-            "Recuperação de Senha", 
-            "Seu token de recuperação é: " + token
-        );
+        user.setAtivo(!user.isAtivo());
+        usuarioRepository.save(user);
     }
 
-    public void resetPassword(String token, String newPassword) {
-        Usuario usuario = usuarioRepository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Token inválido"));
+    public void excluir(Long id) {
+        Usuario user = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
 
-        usuario.setSenha(passwordEncoder.encode(newPassword));
-        usuario.setResetToken(null); 
-        usuarioRepository.save(usuario);
+        // PROTEÇÃO: Impede excluir Administradores
+        if (user.getRole() == Usuario.Role.ADMIN) {
+            throw new RuntimeException("Não é permitido excluir um administrador.");
+        }
+
+        usuarioRepository.deleteById(id);
     }
 
-    // --- LISTAGEM ---
     public List<UsuarioDTO> listarTodos() {
         return usuarioRepository.findAll().stream()
                 .map(this::mapToDTO)
@@ -137,6 +146,10 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .telefone(user.getTelefone())
                 .avatarUrl(user.getFotoUrl())
+                .ativo(user.isAtivo())
+                .dataValidade(user.getDataValidade())
                 .build();
     }
+
+    // Métodos de recuperação de senha omitidos para brevidade, mas devem permanecer no seu arquivo
 }

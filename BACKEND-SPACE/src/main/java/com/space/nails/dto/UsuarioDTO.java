@@ -1,5 +1,7 @@
 package com.space.nails.dto;
 
+import java.time.LocalDate;
+
 public class UsuarioDTO {
     private Long id;
     private String nome;
@@ -7,16 +9,20 @@ public class UsuarioDTO {
     private String role;
     private String telefone;
     private String avatarUrl;
+    private boolean ativo;
+    private LocalDate dataValidade;
 
     public UsuarioDTO() {}
 
-    public UsuarioDTO(Long id, String nome, String email, String role, String telefone, String avatarUrl) {
+    public UsuarioDTO(Long id, String nome, String email, String role, String telefone, String avatarUrl, boolean ativo, LocalDate dataValidade) {
         this.id = id;
         this.nome = nome;
         this.email = email;
         this.role = role;
         this.telefone = telefone;
         this.avatarUrl = avatarUrl;
+        this.ativo = ativo;
+        this.dataValidade = dataValidade;
     }
 
     public static UsuarioDTOBuilder builder() { return new UsuarioDTOBuilder(); }
@@ -33,6 +39,10 @@ public class UsuarioDTO {
     public void setTelefone(String telefone) { this.telefone = telefone; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public LocalDate getDataValidade() { return dataValidade; }
+    public void setDataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; }
 
     public static class UsuarioDTOBuilder {
         private Long id;
@@ -41,6 +51,8 @@ public class UsuarioDTO {
         private String role;
         private String telefone;
         private String avatarUrl;
+        private boolean ativo;
+        private LocalDate dataValidade;
 
         public UsuarioDTOBuilder id(Long id) { this.id = id; return this; }
         public UsuarioDTOBuilder nome(String nome) { this.nome = nome; return this; }
@@ -48,9 +60,11 @@ public class UsuarioDTO {
         public UsuarioDTOBuilder role(String role) { this.role = role; return this; }
         public UsuarioDTOBuilder telefone(String telefone) { this.telefone = telefone; return this; }
         public UsuarioDTOBuilder avatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; return this; }
+        public UsuarioDTOBuilder ativo(boolean ativo) { this.ativo = ativo; return this; }
+        public UsuarioDTOBuilder dataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; return this; }
 
         public UsuarioDTO build() {
-            return new UsuarioDTO(id, nome, email, role, telefone, avatarUrl);
+            return new UsuarioDTO(id, nome, email, role, telefone, avatarUrl, ativo, dataValidade);
         }
     }
 }
