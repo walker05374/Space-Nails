@@ -30,8 +30,6 @@ public class DataInitializer {
                 admin.setPerfil(Perfil.ADMINISTRADOR);
                 admin.setDataCadastro(LocalDate.now());
                 admin.setAvatarUrl("https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff");
-                admin.setPin(passwordEncoder.encode("0000"));
-
                 usuarioRepository.save(admin);
                 System.out.println("✅ ADMIN CRIADO.");
             } else {

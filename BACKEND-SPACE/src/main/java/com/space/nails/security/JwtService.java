@@ -43,10 +43,6 @@ public class JwtService {
             extraClaims.put("role", usuario.getPerfil().name());
             extraClaims.put("nome", usuario.getNome());
             
-            // Se for CRIANCA e tiver responsável, guarda o ID do pai
-            if (usuario.getResponsavel() != null) {
-                extraClaims.put("responsavelId", usuario.getResponsavel().getId());
-            }
         }
         return generateToken(extraClaims, userDetails);
     }
