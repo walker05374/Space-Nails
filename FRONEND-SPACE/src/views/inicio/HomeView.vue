@@ -23,6 +23,8 @@ const modalServicoOpen = ref(false);
 const agendamentos = ref([]);
 const clientes = ref([]);
 const servicos = ref([]);
+// Estado para armazenar os dados vindos do endpoint /stats (Total Geral)
+const statsBackend = ref({ faturamentoTotal: 0, faturamentoHoje: 0 });
 
 const termoBuscaCliente = ref('');
 const ordemCliente = ref('az'); 
@@ -77,13 +79,18 @@ onMounted(carregarDados);
 
 async function carregarDados() {
   try {
-    const [resA, resC, resS] = await Promise.all([
+    // Agora buscamos também o /dashboard/stats para pegar o Total Geral calculado no backend
+    const [resA, resC, resS, resStats] = await Promise.all([
       api.get('/api/agendamentos'),
       api.get('/api/clientes'),
-      api.get('/api/servicos').catch(() => ({ data: [] }))
+      api.get('/api/servicos').catch(() => ({ data: [] })),
+      api.get('/api/dashboard/stats').catch(() => ({ data: { faturamentoTotal: 0, faturamentoHoje: 0 } }))
     ]);
+
     agendamentos.value = resA.data;
     clientes.value = resC.data;
+    statsBackend.value = resStats.data; // Armazena o total geral vindo do Java
+
     if (resS.data && resS.data.length > 0) {
       servicos.value = resS.data;
     } else {
@@ -105,6 +112,7 @@ const financeiroHoje = computed(() => {
   let recebido = 0;
   let aReceber = 0;
   
+  // Calcula o fluxo APENAS DO DIA (Recebido Hoje e A Receber Hoje)
   agendamentos.value.forEach(a => {
     if (a.dataHora.startsWith(hojeISO)) {
       if (a.status === 'CONCLUIDO') {
@@ -114,7 +122,13 @@ const financeiroHoje = computed(() => {
       }
     }
   });
-  return { recebido, aReceber, total: recebido + aReceber };
+
+  return { 
+      recebido, 
+      aReceber, 
+      // O total geral agora vem do backend (acumulado de todos os dias)
+      totalGeral: statsBackend.value.faturamentoTotal || 0 
+  };
 });
 
 const dadosGrafico = computed(() => {
@@ -243,11 +257,10 @@ function abrirModalNovoCliente() {
 
 function abrirModalEditarCliente(cliente) {
   clienteEmEdicaoId.value = cliente.id;
-  // Preenche o formulário com os dados existentes
   novoCliente.value = {
     nome: cliente.nome,
     telefone: cliente.telefone,
-    endereco: cliente.observacoes || '' // Observações é usado como endereço
+    endereco: cliente.observacoes || '' 
   };
   modalClienteOpen.value = true;
 }
@@ -261,11 +274,9 @@ async function salvarCliente() {
         const payload = { ...novoCliente.value, observacoes: novoCliente.value.endereco };
         
         if (clienteEmEdicaoId.value) {
-            // MODO EDIÇÃO: Usa PUT
             await api.put(`/api/clientes/${clienteEmEdicaoId.value}`, payload);
             alert("Cliente atualizada!");
         } else {
-            // MODO CRIAÇÃO: Usa POST
             await api.post('/api/clientes', payload);
             alert("Cliente cadastrada!");
         }
@@ -280,13 +291,12 @@ async function salvarCliente() {
     }
 }
 
-// --- CORREÇÃO AQUI: Adicionado Alerta de Sucesso ---
 async function excluirCliente(cliente) {
   if (!confirm(`Tem certeza que deseja excluir ${cliente.nome}?`)) return;
   
   try {
     await api.delete(`/api/clientes/${cliente.id}`);
-    alert("Cliente excluído com sucesso!"); // <--- AVISO DE SUCESSO ADICIONADO
+    alert("Cliente excluído com sucesso!"); 
     carregarDados(); 
   } catch (e) {
     alert("Erro ao excluir cliente.");
@@ -296,8 +306,12 @@ async function excluirCliente(cliente) {
 async function atualizarStatus(id, status) {
   try {
     await api.patch(`/api/agendamentos/${id}/status`, { status });
+    // Atualizamos localmente para refletir nos totais sem recarregar tudo
     const item = agendamentos.value.find(a => a.id === id);
     if (item) item.status = status;
+    
+    // Recarrega os dados do backend para atualizar o Total Geral corretamente
+    carregarDados(); 
   } catch (e) { alert("Erro ao atualizar."); }
 }
 
@@ -358,28 +372,30 @@ function formatarMoeda(valor) {
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
       
       <div class="bg-white p-1.5 rounded-2xl shadow-sm inline-flex w-full md:w-auto border border-gray-100 mb-2 overflow-x-auto">
-        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Dashboard</button>
-        <button @click="abaPrincipal = 'agendamentos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'agendamentos' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Agendamentos</button>
-        <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'clientes' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
-        <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'servicos' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
+        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Dashboard</button>
+        <button @click="abaPrincipal = 'agendamentos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'agendamentos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Agendamentos</button>
+        <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'clientes' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
+        <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'servicos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
       </div>
 
       <div v-if="abaPrincipal === 'dashboard'" class="space-y-6 animate-fade-in">
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-16 h-16 bg-green-50 rounded-bl-full -mr-2 -mt-2"></div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Recebido (Hoje)</p>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Recebido</p>
             <p class="text-xl md:text-2xl font-bold text-green-600 mt-1 relative z-10">{{ formatarMoeda(financeiroHoje.recebido) }}</p>
           </div>
+          
           <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-50 rounded-bl-full -mr-2 -mt-2"></div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">A Receber (Hoje)</p>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">A Receber</p>
             <p class="text-xl md:text-2xl font-bold text-yellow-600 mt-1 relative z-10">{{ formatarMoeda(financeiroHoje.aReceber) }}</p>
           </div>
-          <div class="bg-[#0F172A] p-5 rounded-3xl shadow-lg col-span-2 md:col-span-1 text-white relative overflow-hidden">
-            <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-[#DB2777] rounded-full opacity-20 blur-xl"></div>
-            <p class="text-xs font-bold text-gray-300 uppercase tracking-wider">Total (Hoje)</p>
-            <p class="text-xl md:text-2xl font-bold mt-1">{{ formatarMoeda(financeiroHoje.total) }}</p>
+
+          <div class="bg-[#DB2777] p-5 rounded-3xl shadow-lg shadow-pink-500/20 col-span-2 md:col-span-1 text-white relative overflow-hidden">
+            <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-white rounded-full opacity-20 blur-xl"></div>
+            <p class="text-xs font-bold text-pink-100 uppercase tracking-wider">Total</p>
+            <p class="text-xl md:text-2xl font-bold mt-1">{{ formatarMoeda(financeiroHoje.totalGeral) }}</p>
           </div>
         </div>
 

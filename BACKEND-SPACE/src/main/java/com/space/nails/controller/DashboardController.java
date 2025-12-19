@@ -25,6 +25,7 @@ public class DashboardController {
     private final ClienteRepository clienteRepository;
     private final AgendamentoRepository agendamentoRepository;
 
+    // Construtor Manual (Injeção de Dependência)
     public DashboardController(UsuarioRepository usuarioRepository, 
                                ClienteRepository clienteRepository, 
                                AgendamentoRepository agendamentoRepository) {
@@ -36,7 +37,8 @@ public class DashboardController {
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDTO> getStats() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario usuario = usuarioRepository.findByEmail(auth.getName()).orElseThrow();
+        Usuario usuario = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
         LocalDateTime fimDia = LocalDate.now().atTime(LocalTime.MAX);
@@ -44,7 +46,9 @@ public class DashboardController {
         long totalProfs = 0;
         long totalClientes = 0;
         long agendaHoje = 0;
-        double faturamento = 0.0;
+        
+        double faturamentoHoje = 0.0;
+        double faturamentoTotal = 0.0;
 
         // Lógica de Estatísticas (Admin vs Profissional)
         if (usuario.getRole() == Usuario.Role.ADMIN) {
@@ -52,15 +56,23 @@ public class DashboardController {
             totalClientes = clienteRepository.count();
             agendaHoje = agendamentoRepository.count(); 
         } else {
+            // Profissional Comum
             totalProfs = 1; 
             totalClientes = clienteRepository.findByProfissional(usuario).size();
+            
+            // Agendamentos HOJE
             agendaHoje = agendamentoRepository.findByProfissionalAndData(usuario, inicioDia, fimDia).size();
             
-            Double fat = agendamentoRepository.calcularFaturamentoDoDia(usuario, inicioDia, fimDia);
-            faturamento = (fat != null) ? fat : 0.0;
+            // 1. Faturamento Hoje (Só o que caiu hoje)
+            Double fatHoje = agendamentoRepository.calcularFaturamentoDoDia(usuario, inicioDia, fimDia);
+            faturamentoHoje = (fatHoje != null) ? fatHoje : 0.0;
+
+            // 2. Faturamento Total (Acumulado de sempre)
+            Double fatTotal = agendamentoRepository.calcularFaturamentoTotal(usuario);
+            faturamentoTotal = (fatTotal != null) ? fatTotal : 0.0;
         }
 
-        // --- LÓGICA DE VALIDADE ---
+        // --- LÓGICA DE VALIDADE DA ASSINATURA ---
         String avisoValidade = null;
         Integer diasRestantes = null;
         boolean assinaturaAtiva = true;
@@ -77,12 +89,15 @@ public class DashboardController {
             }
         }
 
-        // --- RETORNO MANUAL (SEM LOMBOK) ---
+        // --- RETORNO MANUAL (Preenchendo o DTO) ---
         DashboardStatsDTO dto = new DashboardStatsDTO();
         dto.setTotalProfissionais(totalProfs);
         dto.setTotalClientes(totalClientes);
         dto.setAgendamentosHoje(agendaHoje);
-        dto.setFaturamentoHoje(faturamento);
+        
+        // Setando os faturamentos separados
+        dto.setFaturamentoHoje(faturamentoHoje);
+        dto.setFaturamentoTotal(faturamentoTotal);
         
         dto.setAvisoValidade(avisoValidade);
         dto.setDiasRestantes(diasRestantes);

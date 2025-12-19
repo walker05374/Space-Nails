@@ -31,14 +31,18 @@ public class Agendamento {
     private StatusAgendamento status;
 
     private String observacoes;
+    
+    // Controles de notificação
     private boolean lembrete24hEnviado = false;
     private boolean lembrete2hEnviado = false;
+    private boolean lembrete30minEnviado = false; // NOVO CAMPO
+    
     private String localizacao; 
 
     // CONSTRUTORES
     public Agendamento() {}
 
-    public Agendamento(Long id, Usuario profissional, Cliente cliente, Servico servico, LocalDateTime dataHora, StatusAgendamento status, String observacoes, boolean lembrete24hEnviado, boolean lembrete2hEnviado, String localizacao) {
+    public Agendamento(Long id, Usuario profissional, Cliente cliente, Servico servico, LocalDateTime dataHora, StatusAgendamento status, String observacoes, boolean lembrete24hEnviado, boolean lembrete2hEnviado, boolean lembrete30minEnviado, String localizacao) {
         this.id = id;
         this.profissional = profissional;
         this.cliente = cliente;
@@ -48,6 +52,7 @@ public class Agendamento {
         this.observacoes = observacoes;
         this.lembrete24hEnviado = lembrete24hEnviado;
         this.lembrete2hEnviado = lembrete2hEnviado;
+        this.lembrete30minEnviado = lembrete30minEnviado;
         this.localizacao = localizacao;
     }
 
@@ -72,29 +77,42 @@ public class Agendamento {
         public AgendamentoBuilder localizacao(String l) { this.localizacao = l; return this; }
 
         public Agendamento build() {
-            return new Agendamento(null, profissional, cliente, servico, dataHora, status, observacoes, false, false, localizacao);
+            // Inicializa os booleans como false por padrão
+            return new Agendamento(null, profissional, cliente, servico, dataHora, status, observacoes, false, false, false, localizacao);
         }
     }
 
     // GETTERS E SETTERS
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    
     public Usuario getProfissional() { return profissional; }
     public void setProfissional(Usuario profissional) { this.profissional = profissional; }
+    
     public Cliente getCliente() { return cliente; }
     public void setCliente(Cliente cliente) { this.cliente = cliente; }
+    
     public Servico getServico() { return servico; }
     public void setServico(Servico servico) { this.servico = servico; }
+    
     public LocalDateTime getDataHora() { return dataHora; }
     public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
+    
     public StatusAgendamento getStatus() { return status; }
     public void setStatus(StatusAgendamento status) { this.status = status; }
+    
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
+    
     public boolean isLembrete24hEnviado() { return lembrete24hEnviado; }
     public void setLembrete24hEnviado(boolean lembrete24hEnviado) { this.lembrete24hEnviado = lembrete24hEnviado; }
+    
     public boolean isLembrete2hEnviado() { return lembrete2hEnviado; }
     public void setLembrete2hEnviado(boolean lembrete2hEnviado) { this.lembrete2hEnviado = lembrete2hEnviado; }
+    
+    public boolean isLembrete30minEnviado() { return lembrete30minEnviado; }
+    public void setLembrete30minEnviado(boolean lembrete30minEnviado) { this.lembrete30minEnviado = lembrete30minEnviado; }
+    
     public String getLocalizacao() { return localizacao; }
     public void setLocalizacao(String localizacao) { this.localizacao = localizacao; }
 }

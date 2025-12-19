@@ -2,13 +2,14 @@ package com.space.nails.dto;
 
 public class DashboardStatsDTO {
 
-    // Campos originais
     private long totalProfissionais;
     private long totalClientes;
     private long agendamentosHoje;
-    private double faturamentoHoje;
+    
+    // Separando os faturamentos
+    private Double faturamentoHoje;  // Só do dia atual
+    private Double faturamentoTotal; // Acumulado de sempre
 
-    // Novos campos de Validade
     private String avisoValidade;
     private Integer diasRestantes;
     private boolean assinaturaAtiva;
@@ -17,7 +18,7 @@ public class DashboardStatsDTO {
     public DashboardStatsDTO() {
     }
 
-    // --- GETTERS E SETTERS ---
+    // --- GETTERS E SETTERS MANUAIS ---
 
     public long getTotalProfissionais() {
         return totalProfissionais;
@@ -43,12 +44,20 @@ public class DashboardStatsDTO {
         this.agendamentosHoje = agendamentosHoje;
     }
 
-    public double getFaturamentoHoje() {
+    public Double getFaturamentoHoje() {
         return faturamentoHoje;
     }
 
-    public void setFaturamentoHoje(double faturamentoHoje) {
+    public void setFaturamentoHoje(Double faturamentoHoje) {
         this.faturamentoHoje = faturamentoHoje;
+    }
+
+    public Double getFaturamentoTotal() {
+        return faturamentoTotal;
+    }
+
+    public void setFaturamentoTotal(Double faturamentoTotal) {
+        this.faturamentoTotal = faturamentoTotal;
     }
 
     public String getAvisoValidade() {

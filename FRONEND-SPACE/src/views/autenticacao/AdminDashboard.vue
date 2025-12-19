@@ -29,36 +29,33 @@ const stats = computed(() => {
 });
 
 // --- FUNÇÃO DE DATA (ANTI-FUSO HORÁRIO) ---
-// Garante que dia 25 seja lido como dia 25, ignorando GMT do navegador
 function criarDataLocal(dataString) {
   if (!dataString) return null;
-  // Pega YYYY-MM-DD
   const limpa = dataString.split('T')[0];
   const [ano, mes, dia] = limpa.split('-').map(Number);
-  // Cria data ao meio-dia para segurança
   return new Date(ano, mes - 1, dia, 12, 0, 0);
 }
 
-// --- LÓGICA DO SININHO (VENCIMENTO PRÓXIMO) ---
+// --- LÓGICA DO SININHO (CORRIGIDA) ---
 const usuariosVencendo = computed(() => {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const diasAlerta = 5; // Avisar com 5 dias de antecedência
+  const diasAlerta = 5; 
   const dataLimite = new Date(hoje);
   dataLimite.setDate(hoje.getDate() + diasAlerta);
-  // Ajuste para final do dia limite
   dataLimite.setHours(23, 59, 59, 999);
 
   return usuarios.value.filter(u => {
-    if (u.role === 'ADMIN' || !u.dataValidade) return false;
+    // Ignora Admins, sem validade ou INATIVOS (quem já tá bloqueado não precisa avisar)
+    if (u.role === 'ADMIN' || !u.dataValidade || !u.ativo) return false;
     
     const validade = criarDataLocal(u.dataValidade);
     if (!validade) return false;
 
-    // Lógica: Mostrar se validade for maior/igual a hoje E menor/igual a dataLimite
-    // Isso pega quem vence hoje, amanhã, até 5 dias.
-    return validade >= hoje && validade <= dataLimite;
+    // CORREÇÃO: Pega qualquer um que a validade seja menor que o limite
+    // Isso inclui quem venceu ontem, mês passado (VENCIDOS) e quem vence em 5 dias.
+    return validade <= dataLimite;
   });
 });
 
@@ -139,6 +136,15 @@ function formatarData(data) {
   return d.toLocaleDateString('pt-BR');
 }
 
+// Verifica se já venceu (para exibição no template)
+function isVencido(usuario) {
+    if (!usuario.dataValidade) return false;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    const validade = criarDataLocal(usuario.dataValidade);
+    return validade < hoje;
+}
+
 function isVencendo(usuario) {
   if (usuario.role === 'ADMIN' || !usuario.dataValidade) return false;
   const hoje = new Date();
@@ -149,6 +155,7 @@ function isVencendo(usuario) {
   const validade = criarDataLocal(usuario.dataValidade);
   if (!validade) return false;
 
+  // Retorna true se estiver no intervalo de hoje até 5 dias
   return validade >= hoje && validade <= dataLimite;
 }
 </script>
@@ -163,7 +170,7 @@ function isVencendo(usuario) {
 
       <div class="flex items-center gap-3 md:gap-4">
         
-        <div class="relative group cursor-pointer" title="Próximos Vencimentos">
+        <div class="relative group cursor-pointer" title="Alertas de Assinatura">
           <div class="p-2 rounded-xl hover:bg-gray-100 transition-colors relative">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -177,13 +184,15 @@ function isVencendo(usuario) {
 
           <div v-if="alertasPendentes > 0" class="absolute right-0 top-full mt-2 w-72 bg-white shadow-xl rounded-xl p-4 border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
              <div class="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                <p class="text-xs font-bold text-gray-900 uppercase">Vencendo em breve (5 dias)</p>
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <p class="text-xs font-bold text-gray-900 uppercase">Atenção (Vencidos ou Próximos)</p>
              </div>
              <ul class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                <li v-for="u in usuariosVencendo" :key="u.id" class="text-xs text-gray-600 flex justify-between items-center p-1 hover:bg-gray-50 rounded">
                  <span class="font-medium text-[#0F172A] truncate w-32">{{ u.nome }}</span>
-                 <span class="font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded ml-2">{{ formatarData(u.dataValidade) }}</span>
+                 
+                 <span v-if="isVencido(u)" class="font-bold text-white bg-red-500 px-2 py-0.5 rounded ml-2 text-[10px]">VENCIDO</span>
+                 <span v-else class="font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded ml-2">{{ formatarData(u.dataValidade) }}</span>
                </li>
              </ul>
           </div>
@@ -238,7 +247,8 @@ function isVencendo(usuario) {
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-[#0F172A] flex items-center gap-2">
                       {{ user.nome }}
-                      <span v-if="isVencendo(user)" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold whitespace-nowrap">VENCE EM BREVE</span>
+                      <span v-if="isVencido(user) && user.ativo" class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">VENCIDO</span>
+                      <span v-else-if="isVencendo(user) && user.ativo" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold whitespace-nowrap">VENCE EM BREVE</span>
                       <span v-if="user.role === 'ADMIN'" class="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full">ADMIN</span>
                     </span>
                     <span class="text-xs text-gray-400">{{ user.email }}</span>
@@ -248,7 +258,7 @@ function isVencendo(usuario) {
                 <td class="p-4 text-xs font-medium text-gray-600 whitespace-nowrap">
                    <span v-if="user.role === 'ADMIN'">---</span>
                    <span v-else :class="{
-                     'text-red-500 font-bold': !user.ativo,
+                     'text-red-500 font-bold': !user.ativo || isVencido(user),
                      'text-orange-500 font-bold': isVencendo(user)
                    }">{{ formatarData(user.dataValidade) }}</span>
                 </td>
