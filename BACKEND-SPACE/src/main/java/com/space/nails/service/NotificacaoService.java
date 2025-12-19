@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.space.nails.model.Notificacao;
-import com.space.nails.model.Usuario;
+import com.space.nails.model.Cliente;
 import com.space.nails.repository.NotificacaoRepository;
 import com.space.nails.repository.UsuarioRepository;
 
@@ -23,7 +23,7 @@ public class NotificacaoService {
     }
 
     @Transactional
-    public Notificacao criarNotificacao(Usuario destinatario, String mensagem, String cor, String link) {
+    public Notificacao criarNotificacao(Cliente destinatario, String mensagem, String cor, String link) {
         // CORREÇÃO: Usando o construtor manual de Notificacao
         Notificacao notificacao = new Notificacao(
             null, // ID (será gerado automaticamente pelo DB)
@@ -38,18 +38,18 @@ public class NotificacaoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Notificacao> listarNotificacoesDoUsuario(Usuario usuario) {
-        return notificacaoRepository.findByUsuarioOrderByDataEnvioDesc(usuario);
+    public List<Notificacao> listarNotificacoesDoUsuario(Cliente cliente) {
+        return notificacaoRepository.findByUsuarioOrderByDataEnvioDesc(cliente);
     }
 
     @Transactional(readOnly = true)
-    public List<Notificacao> listarNotificacoesNaoLidasDoUsuario(Usuario usuario) {
-        return notificacaoRepository.findByUsuarioAndLidoFalseOrderByDataEnvioDesc(usuario);
+    public List<Notificacao> listarNotificacoesNaoLidasDoUsuario(Cliente cliente) {
+        return notificacaoRepository.findByUsuarioAndLidoFalseOrderByDataEnvioDesc(cliente);
     }
 
     @Transactional
     public Notificacao marcarNotificacaoComoLida(Long notificacaoId, String userEmail) {
-        Usuario usuarioAutenticado = usuarioRepository.findByEmail(userEmail)
+        Cliente usuarioAutenticado = usuarioRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado: " + userEmail));
 
         Notificacao notificacao = notificacaoRepository.findById(notificacaoId)

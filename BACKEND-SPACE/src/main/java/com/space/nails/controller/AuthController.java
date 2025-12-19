@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.space.nails.dto.*;
 import com.space.nails.model.Perfil;
-import com.space.nails.model.Usuario;
+import com.space.nails.model.Cliente;
 import com.space.nails.repository.UsuarioRepository;
 import com.space.nails.security.JwtService;
 import com.space.nails.service.UsuarioService;
@@ -44,7 +44,7 @@ public class AuthController {
         if (usuarioRepository.findByEmail(request.email()).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email já está em uso."));
         }
-        Usuario novoUsuario = new Usuario();
+        Cliente novoUsuario = new Cliente();
         novoUsuario.setNome(request.nome());
         novoUsuario.setEmail(request.email());
         novoUsuario.setSenha(passwordEncoder.encode(request.senha()));
@@ -66,15 +66,15 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.senha())
             );
-            Usuario usuario = (Usuario) authentication.getPrincipal();
-            String token = jwtService.generateToken(usuario);
+            Cliente cliente = (Cliente) authentication.getPrincipal();
+            String token = jwtService.generateToken(cliente);
             
             return ResponseEntity.ok(new LoginResponseDTO(
                 token, 
-                usuario.getNome(), 
-                usuario.getEmail(), 
-                usuario.getPerfil(),
-                usuario.getAvatarUrl()
+                cliente.getNome(), 
+                cliente.getEmail(), 
+                cliente.getPerfil(),
+                cliente.getAvatarUrl()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Email ou senha inválidos."));

@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import com.space.nails.model.Usuario;
+import com.space.nails.model.Cliente;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -38,10 +38,10 @@ public class JwtService {
     // Este método permite chamar generateToken passando apenas o usuário
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-        if (userDetails instanceof Usuario usuario) {
+        if (userDetails instanceof Cliente cliente) {
             // Adiciona automaticamente o Perfil e o Nome no token
-            extraClaims.put("role", usuario.getPerfil().name());
-            extraClaims.put("nome", usuario.getNome());
+            extraClaims.put("role", cliente.getPerfil().name());
+            extraClaims.put("nome", cliente.getNome());
             
         }
         return generateToken(extraClaims, userDetails);

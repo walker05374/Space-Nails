@@ -14,7 +14,7 @@ public class Notificacao {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    private Cliente cliente;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String mensagem;
@@ -34,9 +34,9 @@ public class Notificacao {
     }
 
 
-    public Notificacao(Long id, Usuario usuario, String mensagem, String link, LocalDateTime dataEnvio, boolean lido, String cor) {
+    public Notificacao(Long id, Cliente cliente, String mensagem, String link, LocalDateTime dataEnvio, boolean lido, String cor) {
         this.id = id;
-        this.usuario = usuario;
+        this.cliente = cliente;
         this.mensagem = mensagem;
         this.link = link;
         this.dataEnvio = dataEnvio;
@@ -52,12 +52,12 @@ public class Notificacao {
         this.id = id;
     }
 
-    public Usuario getUsuario() {
-        return usuario;
+    public Cliente getUsuario() {
+        return cliente;
     }
 
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
+    public void setUsuario(Cliente cliente) {
+        this.cliente = cliente;
     }
 
     public String getMensagem() {

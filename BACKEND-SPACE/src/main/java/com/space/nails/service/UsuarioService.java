@@ -6,7 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.space.nails.model.Usuario;
+import com.space.nails.model.Cliente;
 import com.space.nails.repository.UsuarioRepository;
 
 import java.time.LocalDateTime;
@@ -31,48 +31,48 @@ public class UsuarioService {
 
     @Transactional
     public void atualizarNome(String email, String novoNome) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        Cliente cliente = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
-        usuario.setNome(novoNome);
-        usuarioRepository.save(usuario);
+        cliente.setNome(novoNome);
+        usuarioRepository.save(cliente);
     }
 
     @Transactional
     public void atualizarAvatar(String email, String novaAvatarUrl) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        Cliente cliente = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
-        usuario.setAvatarUrl(novaAvatarUrl);
-        usuarioRepository.save(usuario);
+        cliente.setAvatarUrl(novaAvatarUrl);
+        usuarioRepository.save(cliente);
     }
 
     // --- RECUPERAÇÃO DE SENHA ---
     @Transactional
     public void requestPasswordReset(String email) {
-        Optional<Usuario> usuarioOptional = usuarioRepository.findByEmail(email);
+        Optional<Cliente> usuarioOptional = usuarioRepository.findByEmail(email);
         if (usuarioOptional.isPresent()) {
-            Usuario usuario = usuarioOptional.get();
+            Cliente cliente = usuarioOptional.get();
             String token = UUID.randomUUID().toString();
-            usuario.setResetToken(token);
-            usuario.setResetTokenExpiresAt(LocalDateTime.now().plusHours(1));
-            usuarioRepository.save(usuario);
+            cliente.setResetToken(token);
+            cliente.setResetTokenExpiresAt(LocalDateTime.now().plusHours(1));
+            usuarioRepository.save(cliente);
 
             String resetLink = frontendBaseUrl + "/resetar-senha?token=" + token;
-            emailService.sendPasswordResetEmail(usuario.getEmail(), usuario.getNome(), resetLink);
+            emailService.sendPasswordResetEmail(cliente.getEmail(), cliente.getNome(), resetLink);
         }
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        Usuario usuario = usuarioRepository.findByResetToken(token)
+        Cliente cliente = usuarioRepository.findByResetToken(token)
             .orElseThrow(() -> new RuntimeException("Token inválido."));
             
-        if (usuario.getResetTokenExpiresAt().isBefore(LocalDateTime.now())) {
+        if (cliente.getResetTokenExpiresAt().isBefore(LocalDateTime.now())) {
              throw new RuntimeException("Token expirado.");
         }
 
-        usuario.setSenha(passwordEncoder.encode(newPassword));
-        usuario.setResetToken(null);
-        usuario.setResetTokenExpiresAt(null);
-        usuarioRepository.save(usuario);
+        cliente.setSenha(passwordEncoder.encode(newPassword));
+        cliente.setResetToken(null);
+        cliente.setResetTokenExpiresAt(null);
+        usuarioRepository.save(cliente);
     }
 }

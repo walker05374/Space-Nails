@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.space.nails.model.Perfil;
-import com.space.nails.model.Usuario;
-import com.space.nails.repository.UsuarioRepository;
+import com.space.nails.model.Cliente;
+import com.space.nails.repository.ClienteRepository;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -16,14 +16,14 @@ import java.util.Optional;
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(ClienteRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             String emailAdmin = "admin@admin.com";
-            Optional<Usuario> adminExistente = usuarioRepository.findByEmail(emailAdmin);
+            Optional<Cliente> adminExistente = usuarioRepository.findByEmail(emailAdmin);
 
             if (adminExistente.isEmpty()) {
                 // --- CRIAÇÃO DO ZERO ---
-                Usuario admin = new Usuario();
+                Cliente admin = new Cliente();
                 admin.setNome("Administrador Principal");
                 admin.setEmail(emailAdmin);
                 admin.setSenha(passwordEncoder.encode("admin123"));
@@ -34,7 +34,7 @@ public class DataInitializer {
                 System.out.println("✅ ADMIN CRIADO.");
             } else {
                 // --- ATUALIZAÇÃO FORÇADA DE SENHA (PARA CORRIGIR SEU ERRO 401) ---
-                Usuario admin = adminExistente.get();
+                Cliente admin = adminExistente.get();
                 // Verifica se é admin mesmo, senão força ser
                 if (admin.getPerfil() != Perfil.ADMINISTRADOR) {
                     admin.setPerfil(Perfil.ADMINISTRADOR);
