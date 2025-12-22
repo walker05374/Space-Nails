@@ -6,10 +6,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
-    
+
     // Busca notificações de um USUARIO específico
     List<Notificacao> findByUsuarioOrderByDataEnvioDesc(Usuario usuario);
 
     // Busca não lidas de um USUARIO específico
     List<Notificacao> findByUsuarioAndLidoFalseOrderByDataEnvioDesc(Usuario usuario);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByAgendamento(com.space.nails.model.Agendamento agendamento);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByUsuario(Usuario usuario);
 }

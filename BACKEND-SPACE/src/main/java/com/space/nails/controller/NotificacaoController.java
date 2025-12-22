@@ -49,4 +49,13 @@ public class NotificacaoController {
         notificacaoRepository.save(notificacao);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/limpar/{usuarioId}")
+    public ResponseEntity<Void> limparTodas(@PathVariable Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        notificacaoRepository.deleteByUsuario(usuario);
+        return ResponseEntity.ok().build();
+    }
 }

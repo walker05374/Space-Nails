@@ -121,6 +121,16 @@ async function marcarComoLida(id) {
     }
 }
 
+async function limparTodasNotificacoes() {
+    if (!auth.user?.id) return;
+    try {
+        await api.delete(`/api/public/notificacoes/limpar/${auth.user.id}`);
+        notificacoes.value = [];
+    } catch (e) {
+        console.error("Erro ao limpar notificações", e);
+    }
+}
+
 async function carregarDados() {
   try {
     // Agora buscamos também o /dashboard/stats para pegar o Total Geral calculado no backend
@@ -225,6 +235,12 @@ const listaConcluidos = computed(() => {
 const listaCancelados = computed(() => {
   return agendaDoDia.value
     .filter(a => a.status === 'CANCELADO')
+    .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+});
+
+const listaTotalDoDia = computed(() => {
+  return agendaDoDia.value
+    .filter(a => a.status !== 'CANCELADO')
     .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
 });
 
@@ -635,13 +651,17 @@ async function salvarAgendaBackend() {
             </div>
 
             <!-- Dropdown -->
-            <div v-if="mostrarNotificacoes" class="absolute top-12 right-0 w-72 max-w-[85vw] bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 overflow-hidden animate-fade-in translate-x-4 md:translate-x-0">
+            <div v-if="mostrarNotificacoes" 
+                 class="fixed top-16 left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 overflow-hidden animate-fade-in md:absolute md:top-12 md:right-0 md:left-auto md:w-80">
                 <div class="px-3 py-2 border-b border-gray-50 flex justify-between items-center">
                     <h4 class="font-bold text-[#0F172A] text-sm">Notificações</h4>
-                    <span v-if="qtdNaoLidas > 0" class="text-[10px] bg-red-50 text-red-500 font-bold px-2 py-0.5 rounded-full">{{ qtdNaoLidas }} novas</span>
+                    <div class="flex items-center gap-2">
+                        <button v-if="notificacoes.length > 0" @click.stop="limparTodasNotificacoes" class="text-[10px] font-bold text-[#DB2777] hover:underline uppercase">Limpar</button>
+                        <span v-if="qtdNaoLidas > 0" class="text-[10px] bg-red-50 text-red-500 font-bold px-2 py-0.5 rounded-full">{{ qtdNaoLidas }}</span>
+                    </div>
                 </div>
                 
-                <div class="max-h-64 overflow-y-auto">
+                <div class="max-h-[60vh] md:max-h-64 overflow-y-auto">
                     <div v-if="notificacoes.length === 0" class="p-6 text-center text-gray-400 text-xs">
                         Nenhuma notificação nova.
                     </div>
@@ -676,24 +696,24 @@ async function salvarAgendaBackend() {
         </div>
 
         <div class="flex flex-col items-end mr-1 md:mr-2">
-            <span class="text-xs md:text-sm font-bold text-[#0F172A] truncate max-w-[100px] md:max-w-none">{{ auth.user?.nome }}</span>
+            <span class="text-xs md:text-sm font-bold text-[#0F172A] truncate max-w-[80px] md:max-w-none">{{ auth.user?.nome }}</span>
             <span v-if="auth.user?.dataValidade && auth.user?.role !== 'ADMIN'"
                   @click="abrirWhatsappRenovacao"
-                  class="text-[10px] font-bold cursor-pointer hover:underline transition-colors whitespace-nowrap"
+                  class="hidden sm:block text-[10px] font-bold cursor-pointer hover:underline transition-colors whitespace-nowrap"
                   :class="alertaVencimento ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-[#DB2777]'">
                Validade: {{ formatarDataSimples(auth.user.dataValidade) }}
             </span>
         </div>
 
-        <button @click="abrirModalConfigAgenda" class="text-[10px] md:text-xs text-[#DB2777] font-bold border border-pink-100 bg-pink-50 px-2 md:px-3 py-1.5 rounded-lg hover:bg-pink-100 mr-2">⚙️ AGENDA</button>
-        <button @click="auth.logout" class="text-[10px] md:text-xs text-red-500 font-bold border border-red-100 px-2 md:px-3 py-1.5 rounded-lg hover:bg-red-50">SAIR</button>
+        <button @click="abrirModalConfigAgenda" class="text-[10px] md:text-xs text-[#DB2777] font-bold border border-pink-100 bg-pink-50 px-2 md:px-3 py-1.5 rounded-lg hover:bg-pink-100 mr-1 md:mr-2">⚙️ AGENDA</button>
+        <button @click="auth.logout" class="text-[10px] md:text-xs text-red-500 font-bold border border-red-100 px-2 md:px-3 py-1.5 rounded-lg hover:bg-red-50 shrink-0">SAIR</button>
       </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
       
       <div class="bg-white p-1.5 rounded-2xl shadow-sm inline-flex w-full md:w-auto border border-gray-100 mb-2 overflow-x-auto">
-        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Dashboard</button>
+        <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Relatório</button>
         <button @click="abaPrincipal = 'agendamentos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'agendamentos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Agendamentos</button>
         <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'clientes' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
         <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'servicos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
@@ -713,11 +733,11 @@ async function salvarAgendaBackend() {
             <p class="text-xl md:text-2xl font-bold text-yellow-600 mt-1 relative z-10">{{ formatarMoeda(financeiroHoje.aReceber) }}</p>
           </div>
 
-          <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
+          <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden col-span-2 md:col-span-1">
              <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-2 -mt-2"></div>
-             <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Agendados</p>
+             <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Agendamentos</p>
              <div class="flex items-end justify-between mt-1 relative z-10">
-                 <p class="text-xl md:text-2xl font-bold text-blue-600">{{ listaPendentes.length }}</p>
+                 <p class="text-xl md:text-2xl font-bold text-blue-600">{{ listaTotalDoDia.length }}</p>
                  <button @click="{ abaPrincipal = 'agendamentos'; abaAgenda = 'todos'; }" class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors">Ver Todos</button>
              </div>
           </div>

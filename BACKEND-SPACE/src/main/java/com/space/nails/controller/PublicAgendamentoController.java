@@ -231,6 +231,9 @@ public class PublicAgendamentoController {
 
         // CRIA NOTIFICAÇÃO
         try {
+            // Remove notificações anteriores deste mesmo agendamento (Deduping)
+            notificacaoRepository.deleteByAgendamento(salvo);
+
             java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
             String dataFormatada = dto.getDataHora().format(dtf);
 
@@ -241,7 +244,8 @@ public class PublicAgendamentoController {
                     null,
                     LocalDateTime.now(),
                     false,
-                    "success");
+                    "success",
+                    salvo); // Link com Agendamento
             notificacaoRepository.save(notif);
         } catch (Exception e) {
             System.err.println("Erro ao salvar notificação: " + e.getMessage());
@@ -294,6 +298,9 @@ public class PublicAgendamentoController {
 
         // CRIA NOTIFICAÇÃO DE REMARCAÇÃO
         try {
+            // Remove notificações anteriores deste mesmo agendamento (Deduping)
+            notificacaoRepository.deleteByAgendamento(salvo);
+
             Notificacao notif = new Notificacao(
                     null,
                     agendamento.getProfissional(),
@@ -301,7 +308,8 @@ public class PublicAgendamentoController {
                     null,
                     LocalDateTime.now(),
                     false,
-                    "warning");
+                    "warning",
+                    salvo); // Link com Agendamento
             notificacaoRepository.save(notif);
         } catch (Exception e) {
             System.err.println("Erro ao salvar notificação: " + e.getMessage());

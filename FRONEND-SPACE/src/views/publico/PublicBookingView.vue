@@ -178,6 +178,10 @@
                    <span class="text-sm font-bold text-[#0F172A]">{{ nomeProfissional || 'Space Nails' }}</span>
                </div>
                <div class="flex justify-between border-b border-dashed border-gray-200 pb-2">
+                   <span class="text-xs font-bold text-gray-400 uppercase">Cliente</span>
+                   <span class="text-sm font-bold text-[#0F172A]">{{ cliente.nome }}</span>
+               </div>
+               <div class="flex justify-between border-b border-dashed border-gray-200 pb-2">
                    <span class="text-xs font-bold text-gray-400 uppercase">Serviço</span>
                    <span class="text-sm font-bold text-[#0F172A]">{{ servicoSelecionado?.nome }}</span>
                </div>
