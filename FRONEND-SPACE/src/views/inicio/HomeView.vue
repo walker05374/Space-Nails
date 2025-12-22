@@ -334,7 +334,7 @@ function formatarMoeda(valor) {
     
     <header class="bg-white sticky top-0 z-30 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center">
       <div>
-        <h1 class="text-lg md:text-xl font-bold text-[#0F172A]">Studio<span class="text-[#DB2777]">.Nails</span></h1>
+        <h1 class="text-lg md:text-xl font-bold text-[#0F172A]">Space<span class="text-[#DB2777]">.Nails</span></h1>
         <p class="text-[10px] md:text-xs font-medium text-gray-400 capitalize">{{ hojeStr }}</p>
       </div>
       

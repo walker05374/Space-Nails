@@ -84,7 +84,7 @@ async function fazerLogin() {
     <div class="w-full max-w-md bg-white p-10 rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 relative z-10">
       
       <div class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">Studio<span class="text-[#DB2777]">.Nails</span></h1>
+        <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">Space<span class="text-[#DB2777]">.Nails</span></h1>
         <p class="text-gray-400 text-sm mt-2 font-medium">Bem-vinda de volta</p>
       </div>
 
