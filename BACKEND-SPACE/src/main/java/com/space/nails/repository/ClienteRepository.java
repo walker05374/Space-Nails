@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     List<Cliente> findByProfissional(Usuario profissional);
+
+    java.util.Optional<Cliente> findByTelefone(String telefone);
 }

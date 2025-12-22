@@ -32,6 +32,12 @@ const router = createRouter({
       component: () => import('../views/autenticacao/RedefinirSenhaView.vue'),
       meta: { publico: true } // Importante: Permite acesso sem login
     },
+    {
+      path: '/agendar/:slug',
+      name: 'booking',
+      component: () => import('../views/publico/PublicBookingView.vue'),
+      meta: { publico: true }
+    },
     // --- ROTAS PROTEGIDAS ---
     {
       path: '/home',
@@ -46,9 +52,9 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'ADMIN' }
     },
     // Rota para qualquer URL não encontrada volta pro login
-    { 
-      path: '/:pathMatch(.*)*', 
-      redirect: '/login' 
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/login'
     }
   ]
 })

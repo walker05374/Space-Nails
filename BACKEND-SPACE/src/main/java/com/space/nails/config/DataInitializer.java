@@ -15,9 +15,9 @@ import java.time.LocalDate;
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(UsuarioRepository usuarioRepository, 
-                                   ServicoRepository servicoRepository,
-                                   PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(UsuarioRepository usuarioRepository,
+            ServicoRepository servicoRepository,
+            PasswordEncoder passwordEncoder) {
         return args -> {
             // Cria Admin se não existir
             if (usuarioRepository.findByEmail("admin@space.com").isEmpty()) {
@@ -28,8 +28,16 @@ public class DataInitializer {
                         .role(Usuario.Role.ADMIN)
                         .ativo(true)
                         .build();
-                usuarioRepository.save(admin);
+                Usuario adminSaved = usuarioRepository.save(admin);
                 System.out.println("✅ Admin criado: admin@space.com / admin123");
+
+                // --- CRIAR SERVIÇOS PADRÃO (TEMPLATES) ---
+                // Vinculados ao Admin, servirão de base para novos profissionais
+                if (servicoRepository.findByProfissional(adminSaved).isEmpty()) {
+                    servicoRepository.save(new Servico(null, "Manicure", 35.00, 40, adminSaved));
+                    servicoRepository.save(new Servico(null, "Pedicure", 40.00, 40, adminSaved));
+                    System.out.println("✅ Serviços Padrão (Admin) criados!");
+                }
             }
 
             // Exemplo: Cria um profissional padrão
@@ -43,7 +51,7 @@ public class DataInitializer {
                         .dataValidade(LocalDate.now().plusDays(30))
                         .build();
                 prof = usuarioRepository.save(prof);
-                
+
                 // Cria serviços iniciais para este profissional
                 servicoRepository.save(new Servico(null, "Manicure", 35.00, 40, prof));
                 servicoRepository.save(new Servico(null, "Pedicure", 40.00, 40, prof));

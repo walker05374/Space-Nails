@@ -2,7 +2,7 @@ package com.space.nails.service;
 
 import com.space.nails.dto.*;
 import com.space.nails.model.Usuario;
-import com.space.nails.repository.UsuarioRepository;
+import com.space.nails.repository.*;
 import com.space.nails.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,27 +24,41 @@ public class UsuarioService {
     private final AuthenticationManager authenticationManager;
     private final GmailEmailService emailService;
 
+    // Repositories for Cascade Delete
+    private final AgendamentoRepository agendamentoRepository;
+    private final ServicoRepository servicoRepository;
+    private final ClienteRepository clienteRepository;
+    private final NotificacaoRepository notificacaoRepository;
+
     public UsuarioService(UsuarioRepository usuarioRepository,
-                          PasswordEncoder passwordEncoder,
-                          JwtService jwtService,
-                          AuthenticationManager authenticationManager,
-                          GmailEmailService emailService) {
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            AuthenticationManager authenticationManager,
+            GmailEmailService emailService,
+            AgendamentoRepository agendamentoRepository,
+            ServicoRepository servicoRepository,
+            ClienteRepository clienteRepository,
+            NotificacaoRepository notificacaoRepository) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.agendamentoRepository = agendamentoRepository;
+        this.servicoRepository = servicoRepository;
+        this.clienteRepository = clienteRepository;
+        this.notificacaoRepository = notificacaoRepository;
     }
 
     public LoginResponseDTO login(LoginRequestDTO request) {
         var user = usuarioRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        
+
         // 1. Verifica se a conta está desativada manualmente (toggle do admin)
         if (!user.isAtivo()) {
             throw new RuntimeException("CONTA_SUSPENSA");
         }
-        
+
         // 2. Verifica se a validade expirou (REGRA RIGOROSA)
         if (user.getDataValidade() != null && user.getDataValidade().isBefore(LocalDate.now())) {
             // Lança exceção para o Frontend exibir o aviso
@@ -53,11 +67,10 @@ public class UsuarioService {
 
         // Se passou, tenta autenticar no Spring Security
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-        
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+
         var token = jwtService.generateToken(user);
-        
+
         return LoginResponseDTO.builder()
                 .token(token)
                 .nome(user.getNome())
@@ -65,7 +78,8 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .userId(user.getId())
                 .avatar(user.getFotoUrl())
-                .dataValidade(user.getDataValidade()) // <--- LINHA CRUCIAL ADICIONADA
+                .dataValidade(user.getDataValidade())
+                .endereco(user.getEndereco()) // <--- Endereço aqui
                 .build();
     }
 
@@ -74,8 +88,8 @@ public class UsuarioService {
             throw new RuntimeException("E-mail já cadastrado!");
         }
 
-        LocalDate validadeFinal = request.getDataValidade() != null 
-                ? request.getDataValidade() 
+        LocalDate validadeFinal = request.getDataValidade() != null
+                ? request.getDataValidade()
                 : LocalDate.now().plusDays(30);
 
         Usuario novoProfissional = Usuario.builder()
@@ -90,6 +104,21 @@ public class UsuarioService {
                 .build();
 
         usuarioRepository.save(novoProfissional);
+
+        // --- INICIALIZAÇÃO DE SERVIÇOS PADRÃO ---
+        // Copia os serviços "Template" (Globais/Admin) para o novo profissional
+        // Assim ele já nasce com serviços, mas pode editar/excluir os SEUS sem afetar
+        // os outros.
+        List<com.space.nails.model.Servico> templates = servicoRepository.findTemplates();
+        for (com.space.nails.model.Servico t : templates) {
+            com.space.nails.model.Servico copia = new com.space.nails.model.Servico();
+            copia.setNome(t.getNome());
+            copia.setValor(t.getValor());
+            copia.setTempoEstimado(t.getTempoEstimado());
+            copia.setProfissional(novoProfissional); // Vincula ao novo usuário
+            servicoRepository.save(copia);
+        }
+
         return mapToDTO(novoProfissional);
     }
 
@@ -97,10 +126,13 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
 
-        if (request.getNome() != null) usuario.setNome(request.getNome());
-        if (request.getTelefone() != null) usuario.setTelefone(request.getTelefone());
-        if (request.getDataValidade() != null) usuario.setDataValidade(request.getDataValidade());
-        
+        if (request.getNome() != null)
+            usuario.setNome(request.getNome());
+        if (request.getTelefone() != null)
+            usuario.setTelefone(request.getTelefone());
+        if (request.getDataValidade() != null)
+            usuario.setDataValidade(request.getDataValidade());
+
         if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
             if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
                 throw new RuntimeException("Este novo e-mail já está em uso.");
@@ -119,7 +151,7 @@ public class UsuarioService {
     public void alternarStatus(Long id) {
         Usuario user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        
+
         if (user.getRole() == Usuario.Role.ADMIN) {
             throw new RuntimeException("Não é permitido desativar um administrador.");
         }
@@ -128,6 +160,7 @@ public class UsuarioService {
         usuarioRepository.save(user);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void excluir(Long id) {
         Usuario user = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -136,12 +169,33 @@ public class UsuarioService {
             throw new RuntimeException("Não é permitido excluir um administrador.");
         }
 
+        // --- EXCLUSÃO EM CASCATA ---
+        // 1. Notificações
+        // Busca TODAS as notificações do profissional
+        List<com.space.nails.model.Notificacao> notificacoes = notificacaoRepository
+                .findByUsuarioOrderByDataEnvioDesc(user);
+        notificacaoRepository.deleteAll(notificacoes);
+
+        // 2. Agendamentos
+        List<com.space.nails.model.Agendamento> agendamentos = agendamentoRepository
+                .findByProfissionalOrderByDataHoraDesc(user);
+        agendamentoRepository.deleteAll(agendamentos);
+
+        // 3. Serviços
+        List<com.space.nails.model.Servico> servicos = servicoRepository.findByProfissional(user);
+        servicoRepository.deleteAll(servicos);
+
+        // 4. Clientes
+        List<com.space.nails.model.Cliente> clientes = clienteRepository.findByProfissional(user);
+        clienteRepository.deleteAll(clientes);
+
+        // 5. Remove o Usuário
         usuarioRepository.deleteById(id);
     }
 
     public void requestPasswordReset(String email) {
         Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
-        
+
         if (userOpt.isPresent()) {
             Usuario user = userOpt.get();
             String token = UUID.randomUUID().toString();
@@ -150,13 +204,13 @@ public class UsuarioService {
 
             // Ajuste a URL conforme seu ambiente
             String link = "http://localhost:5173/redefinir-senha?token=" + token;
-            
+
             String assunto = "Recuperação de Senha - Space Nails";
             String corpo = "Olá, " + user.getNome() + "!\n\n" +
-                           "Você solicitou a redefinição de senha.\n" +
-                           "Clique no link abaixo para criar uma nova senha:\n\n" +
-                           link + "\n\n" +
-                           "Se não foi você, ignore este e-mail.";
+                    "Você solicitou a redefinição de senha.\n" +
+                    "Clique no link abaixo para criar uma nova senha:\n\n" +
+                    link + "\n\n" +
+                    "Se não foi você, ignore este e-mail.";
 
             emailService.sendEmail(user.getEmail(), assunto, corpo);
         }
@@ -187,8 +241,9 @@ public class UsuarioService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .telefone(user.getTelefone())
+                .endereco(user.getEndereco()) // Novo
                 .avatarUrl(user.getFotoUrl())
-                .ativo(statusVisual) 
+                .ativo(statusVisual)
                 .dataValidade(user.getDataValidade())
                 .build();
     }

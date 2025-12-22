@@ -10,10 +10,13 @@ public class LoginResponseDTO {
     private Long userId;
     private String avatar;
     private LocalDate dataValidade;
+    private String endereco; // Novo
 
-    public LoginResponseDTO() {}
+    public LoginResponseDTO() {
+    }
 
-    public LoginResponseDTO(String token, String nome, String email, String role, Long userId, String avatar, LocalDate dataValidade) {
+    public LoginResponseDTO(String token, String nome, String email, String role, Long userId, String avatar,
+            LocalDate dataValidade, String endereco) {
         this.token = token;
         this.nome = nome;
         this.email = email;
@@ -21,17 +24,44 @@ public class LoginResponseDTO {
         this.userId = userId;
         this.avatar = avatar;
         this.dataValidade = dataValidade;
+        this.endereco = endereco;
     }
 
-    public static LoginResponseDTOBuilder builder() { return new LoginResponseDTOBuilder(); }
+    public static LoginResponseDTOBuilder builder() {
+        return new LoginResponseDTOBuilder();
+    }
 
-    public String getToken() { return token; }
-    public String getNome() { return nome; }
-    public String getEmail() { return email; }
-    public String getRole() { return role; }
-    public Long getUserId() { return userId; }
-    public String getAvatar() { return avatar; }
-    public LocalDate getDataValidade() { return dataValidade; }
+    public String getToken() {
+        return token;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public LocalDate getDataValidade() {
+        return dataValidade;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
 
     public static class LoginResponseDTOBuilder {
         private String token;
@@ -41,17 +71,50 @@ public class LoginResponseDTO {
         private Long userId;
         private String avatar;
         private LocalDate dataValidade;
+        private String endereco;
 
-        public LoginResponseDTOBuilder token(String token) { this.token = token; return this; }
-        public LoginResponseDTOBuilder nome(String nome) { this.nome = nome; return this; }
-        public LoginResponseDTOBuilder email(String email) { this.email = email; return this; }
-        public LoginResponseDTOBuilder role(String role) { this.role = role; return this; }
-        public LoginResponseDTOBuilder userId(Long userId) { this.userId = userId; return this; }
-        public LoginResponseDTOBuilder avatar(String avatar) { this.avatar = avatar; return this; }
-        public LoginResponseDTOBuilder dataValidade(LocalDate dataValidade) { this.dataValidade = dataValidade; return this; }
+        public LoginResponseDTOBuilder token(String token) {
+            this.token = token;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder nome(String nome) {
+            this.nome = nome;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder email(String email) {
+            this.email = email;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder role(String role) {
+            this.role = role;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder userId(Long userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder avatar(String avatar) {
+            this.avatar = avatar;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder dataValidade(LocalDate dataValidade) {
+            this.dataValidade = dataValidade;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder endereco(String endereco) {
+            this.endereco = endereco;
+            return this;
+        }
 
         public LoginResponseDTO build() {
-            return new LoginResponseDTO(token, nome, email, role, userId, avatar, dataValidade);
+            return new LoginResponseDTO(token, nome, email, role, userId, avatar, dataValidade, endereco);
         }
     }
 }
