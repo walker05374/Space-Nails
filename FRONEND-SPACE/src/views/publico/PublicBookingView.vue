@@ -343,13 +343,13 @@ onMounted(async () => {
     // 1. Pega o slug da URL (ex: /agendar/ana)
     const slug = route.params.slug
     if (!slug) {
-       erro.value = "Link inválido. Informe o profissional."
+       erro.value = "Link inválido ou expirado. Verifique o Código de Convite com o profissional."
        return
     }
 
     // 2. Resolve o Slug para pegar o ID real
     const profRes = await fetch(`${API_URL}/profissional/slug/${slug}`)
-    if (!profRes.ok) throw new Error("Profissional não encontrado.")
+    if (!profRes.ok) throw new Error("Link não encontrado ou inválido. Use o Código de Convite.")
     
     const profissional = await profRes.json()
     // Agora busca detalhes completos (telefone, endereco)
