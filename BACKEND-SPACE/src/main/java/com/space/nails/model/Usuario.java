@@ -22,11 +22,16 @@ public class Usuario implements UserDetails {
     @Column(unique = true)
     private String email;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private String senha;
     private String telefone;
     private String fotoUrl;
     private String resetToken;
     private String endereco; // Novo campo de endereço
+    private String localizacaoUrl; // Link do Google Maps
+
+    @Column(unique = true)
+    private String codigoConvite; // Código curto para URL (Ex: "AF3K19")
 
     @Enumerated(EnumType.STRING)
     private Role role;
@@ -45,7 +50,7 @@ public class Usuario implements UserDetails {
     }
 
     public Usuario(Long id, String nome, String email, String senha, String telefone, String fotoUrl, String resetToken,
-            String endereco,
+            String endereco, String localizacaoUrl, String codigoConvite,
             Role role, boolean ativo, LocalDate dataValidade) {
         this.id = id;
         this.nome = nome;
@@ -55,6 +60,8 @@ public class Usuario implements UserDetails {
         this.fotoUrl = fotoUrl;
         this.resetToken = resetToken;
         this.endereco = endereco;
+        this.localizacaoUrl = localizacaoUrl;
+        this.codigoConvite = codigoConvite;
         this.role = role;
         this.ativo = ativo;
         this.dataValidade = dataValidade;
@@ -72,8 +79,11 @@ public class Usuario implements UserDetails {
         private String senha;
         private String telefone;
         private String fotoUrl;
+
         private String resetToken;
         private String endereco;
+        private String localizacaoUrl;
+        private String codigoConvite;
         private Role role;
         private boolean ativo = true;
         private LocalDate dataValidade;
@@ -118,6 +128,16 @@ public class Usuario implements UserDetails {
             return this;
         }
 
+        public UsuarioBuilder localizacaoUrl(String localizacaoUrl) {
+            this.localizacaoUrl = localizacaoUrl;
+            return this;
+        }
+
+        public UsuarioBuilder codigoConvite(String codigoConvite) {
+            this.codigoConvite = codigoConvite;
+            return this;
+        }
+
         public UsuarioBuilder role(Role role) {
             this.role = role;
             return this;
@@ -134,7 +154,9 @@ public class Usuario implements UserDetails {
         }
 
         public Usuario build() {
-            return new Usuario(id, nome, email, senha, telefone, fotoUrl, resetToken, endereco, role, ativo,
+            return new Usuario(id, nome, email, senha, telefone, fotoUrl, resetToken, endereco, localizacaoUrl,
+                    codigoConvite, role,
+                    ativo,
                     dataValidade);
         }
     }
@@ -202,6 +224,22 @@ public class Usuario implements UserDetails {
 
     public void setEndereco(String endereco) {
         this.endereco = endereco;
+    }
+
+    public String getLocalizacaoUrl() {
+        return localizacaoUrl;
+    }
+
+    public void setLocalizacaoUrl(String localizacaoUrl) {
+        this.localizacaoUrl = localizacaoUrl;
+    }
+
+    public String getCodigoConvite() {
+        return codigoConvite;
+    }
+
+    public void setCodigoConvite(String codigoConvite) {
+        this.codigoConvite = codigoConvite;
     }
 
     public Role getRole() {

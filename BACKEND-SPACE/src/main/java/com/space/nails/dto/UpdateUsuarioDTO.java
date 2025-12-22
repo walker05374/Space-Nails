@@ -9,18 +9,20 @@ public class UpdateUsuarioDTO {
     private String novaSenha;
     private LocalDate dataValidade;
     private String endereco; // Novo
+    private String localizacaoUrl;
 
     public UpdateUsuarioDTO() {
     }
 
     public UpdateUsuarioDTO(String nome, String email, String telefone, String novaSenha, LocalDate dataValidade,
-            String endereco) {
+            String endereco, String localizacaoUrl) {
         this.nome = nome;
         this.email = email;
         this.telefone = telefone;
         this.novaSenha = novaSenha;
         this.dataValidade = dataValidade;
         this.endereco = endereco;
+        this.localizacaoUrl = localizacaoUrl;
     }
 
     public String getNome() {
@@ -69,5 +71,13 @@ public class UpdateUsuarioDTO {
 
     public void setEndereco(String endereco) {
         this.endereco = endereco;
+    }
+
+    public String getLocalizacaoUrl() {
+        return localizacaoUrl;
+    }
+
+    public void setLocalizacaoUrl(String localizacaoUrl) {
+        this.localizacaoUrl = localizacaoUrl;
     }
 }

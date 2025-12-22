@@ -15,4 +15,17 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      // Opcional: Proxy também para API se quiser remover localhost:8080 do axios no futuro
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
+  }
 })

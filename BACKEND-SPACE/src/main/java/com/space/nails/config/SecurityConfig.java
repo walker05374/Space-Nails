@@ -35,9 +35,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilita o CORS
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll() // Permite acesso aos endpoints públicos de
-                                                                       // agendamento
+                        .requestMatchers("/api/public/**", "/api/auth/**", "/public/**", "/uploads/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Permite acesso aos endpoints públicos de
+                        // agendamento
                         .requestMatchers("/actuator/**", "/api/health").permitAll() // Verifique se o path é /api/health
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
@@ -52,7 +52,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // Origem do seu Vite/Vue
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:5174",
+                "http://localhost:5175", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175")); // Origens
+                                                                                                                      // do
+                                                                                                                      // Vite/Vue
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setAllowCredentials(true);

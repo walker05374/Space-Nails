@@ -67,6 +67,8 @@ async function fazerLogin() {
       erro.value = "Acesso suspenso. Entre em contato com o suporte.";
     } else if (e.response?.status === 401) {
       erro.value = 'E-mail ou senha incorretos.';
+    } else if (e.response?.status === 404 || msg === "Usuário não encontrado") {
+      erro.value = 'Usuário não encontrado. Verifique o e-mail.';
     } else {
       erro.value = 'Erro ao processar login.';
     }

@@ -65,6 +65,12 @@ public class UsuarioService {
             throw new RuntimeException("ASSINATURA_EXPIRADA");
         }
 
+        // 3. Garantir que o usuário tem um Código de Convite (Migração Lazy)
+        if (user.getCodigoConvite() == null || user.getCodigoConvite().isEmpty()) {
+            user.setCodigoConvite(gerarCodigoUnico());
+            usuarioRepository.save(user);
+        }
+
         // Se passou, tenta autenticar no Spring Security
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -79,8 +85,15 @@ public class UsuarioService {
                 .userId(user.getId())
                 .avatar(user.getFotoUrl())
                 .dataValidade(user.getDataValidade())
-                .endereco(user.getEndereco()) // <--- Endereço aqui
+                .endereco(user.getEndereco())
+                .localizacaoUrl(user.getLocalizacaoUrl())
+                .codigoConvite(user.getCodigoConvite()) // Adicionar ao DTO depois
                 .build();
+    }
+
+    private String gerarCodigoUnico() {
+        // Gera um código de 6 caracteres alfanuméricos (Maiúsculas)
+        return UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     public UsuarioDTO criarProfissional(RegisterRequestDTO request) {
@@ -100,6 +113,7 @@ public class UsuarioService {
                 .role(Usuario.Role.PROFISSIONAL)
                 .fotoUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "https://i.pravatar.cc/150")
                 .ativo(true)
+                .codigoConvite(gerarCodigoUnico()) // Gera o código
                 .dataValidade(validadeFinal)
                 .build();
 
@@ -132,6 +146,10 @@ public class UsuarioService {
             usuario.setTelefone(request.getTelefone());
         if (request.getDataValidade() != null)
             usuario.setDataValidade(request.getDataValidade());
+        if (request.getEndereco() != null)
+            usuario.setEndereco(request.getEndereco());
+        if (request.getLocalizacaoUrl() != null)
+            usuario.setLocalizacaoUrl(request.getLocalizacaoUrl());
 
         if (request.getEmail() != null && !request.getEmail().equals(usuario.getEmail())) {
             if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -242,6 +260,7 @@ public class UsuarioService {
                 .role(user.getRole().name())
                 .telefone(user.getTelefone())
                 .endereco(user.getEndereco()) // Novo
+                .localizacaoUrl(user.getLocalizacaoUrl())
                 .avatarUrl(user.getFotoUrl())
                 .ativo(statusVisual)
                 .dataValidade(user.getDataValidade())

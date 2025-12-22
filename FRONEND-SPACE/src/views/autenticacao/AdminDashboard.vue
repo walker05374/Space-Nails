@@ -158,6 +158,56 @@ function isVencendo(usuario) {
   // Retorna true se estiver no intervalo de hoje até 5 dias
   return validade >= hoje && validade <= dataLimite;
 }
+
+async function fazerBackup() {
+    try {
+        const response = await api.post('/api/admin/backup', {}, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'backup_spacenails.sql');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        alert("Backup baixado com sucesso! Guarde este arquivo em segurança.");
+    } catch(e) {
+        console.error(e);
+        alert("Erro ao gerar backup.");
+    }
+}
+
+// LÓGICA DE RESTORE
+const arquivoRestore = ref(null);
+
+function triggerRestore() {
+    if(arquivoRestore.value) arquivoRestore.value.click();
+}
+
+async function onRestoreFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!confirm("⚠️ ATENÇÃO: Isso irá APAGAR TODOS os dados atuais e restaurar os do backup. Deseja continuar?")) {
+        e.target.value = ''; // Limpa
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        carregando.value = true;
+        await api.post('/api/admin/restore', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        alert("Restauração concluída com sucesso! A página será recarregada.");
+        window.location.reload();
+    } catch (err) {
+        console.error(err);
+        alert("Erro ao restaurar: " + (err.response?.data?.message || err.message));
+        carregando.value = false;
+    }
+}
 </script>
 
 <template>
@@ -219,6 +269,29 @@ function isVencendo(usuario) {
           <span class="text-xs font-bold text-red-500 uppercase">Inativos/Vencidos</span>
           <p class="text-3xl font-bold text-red-500 mt-1">{{ stats.vencidos }}</p>
         </div>
+      </section>
+
+      <!-- Ferramentas -->
+      <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+              <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-[#0F172A]">Backup do Sistema</h3>
+                <p class="text-xs text-gray-500 max-w-lg">Faça o download de todos os dados do banco de dados (Profissionais, Clientes, Agendamentos, Portfólio) para segurança.</p>
+              </div>
+          </div>
+
+          <div class="flex gap-2 w-full md:w-auto">
+             <input type="file" ref="arquivoRestore" @change="onRestoreFileChange" class="hidden" accept=".sql">
+             <button @click="triggerRestore" class="flex-1 md:flex-none border border-red-200 text-red-500 px-6 py-3 rounded-xl text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
+                  ⚠️ RESTAURAR
+             </button>
+             <button @click="fazerBackup" class="flex-1 md:flex-none bg-[#0F172A] text-white px-6 py-3 rounded-xl text-xs font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                  📥 BAIXAR DADOS
+             </button>
+          </div>
       </section>
 
       <section class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">

@@ -9,12 +9,13 @@
         <p class="subtitle" v-if="nomeProfissional">Agendamento com <strong>{{ nomeProfissional }}</strong></p>
         
         <!-- Localização Header -->
-        <div v-if="enderecoProfissional" class="text-center mb-6 -mt-6">
-            <a v-if="enderecoProfissional.startsWith('http')" :href="enderecoProfissional" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-[#DB2777] bg-pink-50 px-3 py-1.5 rounded-full hover:bg-pink-100 transition-colors">
+        <!-- Localização Header -->
+        <div v-if="enderecoProfissional || localizacaoUrl" class="text-center mb-6 -mt-6 flex flex-col items-center gap-2">
+            <a v-if="localizacaoUrl" :href="localizacaoUrl" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-[#DB2777] bg-pink-50 px-3 py-1.5 rounded-full hover:bg-pink-100 transition-colors animate-bounce">
                 📍 Ver Localização no Maps
             </a>
-            <span v-else class="text-xs text-gray-500 flex items-center justify-center gap-1">
-                📍 {{ enderecoProfissional }}
+            <span v-if="enderecoProfissional" class="text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                🏠 {{ enderecoProfissional }}
             </span>
         </div>
       </div>
@@ -82,7 +83,12 @@
             class="service-item"
             @click="selecionarServico(servico)"
           >
-            <span class="service-name">{{ servico.nome }}</span>
+            <div class="flex flex-col items-start gap-1">
+                <span class="service-name">{{ servico.nome }}</span>
+                <button @click.stop="abrirGaleria(servico)" class="text-[10px] font-bold text-[#DB2777] bg-pink-50 px-2 py-0.5 rounded hover:bg-pink-100 transition-colors flex items-center gap-1">
+                    📷 Ver fotos
+                </button>
+            </div>
             <span class="service-price">R$ {{ servico.valor }}</span>
           </div>
           <div v-if="servicos.length === 0" class="no-data">Nenhum serviço disponível.</div>
@@ -226,6 +232,34 @@
       </div>
 
     </div>
+
+    <!-- MODAL GALERIA -->
+    <div v-if="modalGaleriaOpen" class="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-fade-in" @click.self="modalGaleriaOpen = false">
+        <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl relative max-h-[80vh] flex flex-col">
+            <button @click="modalGaleriaOpen = false" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold bg-gray-50 p-2 rounded-full transition-colors">
+                ✕
+            </button>
+            
+            <h3 class="text-lg font-bold text-[#0F172A] mb-4 pr-10">Fotos: <span class="text-[#DB2777]">{{ servicoGaleriaNome }}</span></h3>
+            
+            <div v-if="carregandoFotos" class="flex-1 flex items-center justify-center min-h-[200px]">
+                <span class="text-pink-500 font-bold animate-pulse">Carregando fotos...</span>
+            </div>
+            
+            <div v-else-if="fotosGaleria.length === 0" class="flex-1 flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                <span class="text-4xl mb-2">🖼️</span>
+                <p>Nenhuma foto cadastrada para este serviço.</p>
+            </div>
+            
+            <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-2">
+                <div v-for="foto in fotosGaleria" :key="foto.id" class="aspect-square rounded-xl overflow-hidden relative group cursor-zoom-in" @click="registrarVisualizacao(foto)">
+                    <img :src="foto.imagemUrl" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy">
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
   </div>
 </template>
 
@@ -242,7 +276,39 @@ const erro = ref(null)
 const servicoSelecionado = ref(null)
 const dataSelecionada = ref('')
 const horaSelecionada = ref(null)
+
 const profissionalIdConfirmado = ref(null)
+
+// --- GALERIA ---
+const modalGaleriaOpen = ref(false)
+const fotosGaleria = ref([])
+const carregandoFotos = ref(false)
+const servicoGaleriaNome = ref('')
+
+async function abrirGaleria(servico) {
+    servicoGaleriaNome.value = servico.nome
+    modalGaleriaOpen.value = true
+    carregandoFotos.value = true
+    fotosGaleria.value = []
+    
+    try {
+        const res = await fetch(`${API_URL}/portfolio/servico/${servico.id}`)
+        if(res.ok) {
+            fotosGaleria.value = await res.json()
+        }
+    } catch(e) {
+        console.error("Erro ao carregar fotos", e)
+    } finally {
+        carregandoFotos.value = false
+    }
+}
+
+async function registrarVisualizacao(foto) {
+    // Apenas contabiliza click, pode abrir um lightbox se quiser (por enquanto só track)
+    try {
+        await fetch(`${API_URL}/portfolio/${foto.id}/click`, { method: 'POST' })
+    } catch(e) {}
+}
 
 // Estados de Remarcação
 const codigoBusca = ref('')
@@ -260,8 +326,10 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const nomeProfissional = ref('')
+
 const telefoneProfissional = ref('') // Novo
 const enderecoProfissional = ref('') // Novo
+const localizacaoUrl = ref('') // Novo
 const minData = ref('') // Renamed from minDate
 
 onMounted(async () => {
@@ -291,6 +359,7 @@ onMounted(async () => {
         nomeProfissional.value = info.nome
         telefoneProfissional.value = info.telefone
         enderecoProfissional.value = info.endereco
+        localizacaoUrl.value = info.localizacaoUrl
     } else {
         nomeProfissional.value = profissional.nome
     }
@@ -637,4 +706,4 @@ button {
   .bg-booking { padding: 0; align-items: flex-start; }
 }
 </style>
-```
+

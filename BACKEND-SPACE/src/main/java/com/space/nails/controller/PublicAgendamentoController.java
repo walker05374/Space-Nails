@@ -41,18 +41,16 @@ public class PublicAgendamentoController {
 
     @GetMapping("/profissional/slug/{slug}")
     public ResponseEntity<Usuario> getProfissionalBySlug(@PathVariable String slug) {
-        // Busca simples: Tenta achar alguém cujo primeiro nome ou nome completo (sem
-        // espaços) bata com o slug
-        // Em produção, ideal ter campo 'slug' no banco. Aqui faremos match simples.
-        List<Usuario> usuarios = usuarioRepository.findAll();
+        // 1. Tenta buscar pelo CÓDIGO DE CONVITE (Exato)
+        java.util.Optional<Usuario> pPorCodigo = usuarioRepository.findByCodigoConvite(slug.toUpperCase());
+        if (pPorCodigo.isPresent()) {
+            return ResponseEntity.ok(pPorCodigo.get());
+        }
 
-        return usuarios.stream()
-                .filter(u -> u.getNome().toLowerCase().replace(" ", "-").equals(slug.toLowerCase())
-                        || u.getNome().split(" ")[0].toLowerCase().equals(slug.toLowerCase()))
-                .filter(u -> u.getRole() == Usuario.Role.PROFISSIONAL || u.getRole() == Usuario.Role.ADMIN)
-                .findFirst()
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        // REMOVIDO: Busca por nome (Legacy)
+        // Para garantir sigilo, não permitimos mais buscar por nome/slug previsível.
+
+        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/profissional/{id}")
@@ -71,6 +69,7 @@ public class PublicAgendamentoController {
                     dados.put("nome", u.getNome());
                     dados.put("telefone", u.getTelefone());
                     dados.put("endereco", u.getEndereco()); // Retorna o endereço agora
+                    dados.put("localizacaoUrl", u.getLocalizacaoUrl()); // Link do Maps
                     return ResponseEntity.ok(dados);
                 })
                 .orElse(ResponseEntity.notFound().build());

@@ -12,12 +12,13 @@ public class UsuarioDTO {
     private boolean ativo;
     private LocalDate dataValidade;
     private String endereco; // Novo
+    private String localizacaoUrl;
 
     public UsuarioDTO() {
     }
 
     public UsuarioDTO(Long id, String nome, String email, String role, String telefone, String avatarUrl, boolean ativo,
-            LocalDate dataValidade, String endereco) {
+            LocalDate dataValidade, String endereco, String localizacaoUrl) {
         this.id = id;
         this.nome = nome;
         this.email = email;
@@ -27,6 +28,7 @@ public class UsuarioDTO {
         this.ativo = ativo;
         this.dataValidade = dataValidade;
         this.endereco = endereco;
+        this.localizacaoUrl = localizacaoUrl;
     }
 
     public static UsuarioDTOBuilder builder() {
@@ -105,6 +107,14 @@ public class UsuarioDTO {
         this.endereco = endereco;
     }
 
+    public String getLocalizacaoUrl() {
+        return localizacaoUrl;
+    }
+
+    public void setLocalizacaoUrl(String localizacaoUrl) {
+        this.localizacaoUrl = localizacaoUrl;
+    }
+
     public static class UsuarioDTOBuilder {
         private Long id;
         private String nome;
@@ -115,6 +125,7 @@ public class UsuarioDTO {
         private boolean ativo;
         private LocalDate dataValidade;
         private String endereco;
+        private String localizacaoUrl;
 
         public UsuarioDTOBuilder id(Long id) {
             this.id = id;
@@ -161,8 +172,14 @@ public class UsuarioDTO {
             return this;
         }
 
+        public UsuarioDTOBuilder localizacaoUrl(String localizacaoUrl) {
+            this.localizacaoUrl = localizacaoUrl;
+            return this;
+        }
+
         public UsuarioDTO build() {
-            return new UsuarioDTO(id, nome, email, role, telefone, avatarUrl, ativo, dataValidade, endereco);
+            return new UsuarioDTO(id, nome, email, role, telefone, avatarUrl, ativo, dataValidade, endereco,
+                    localizacaoUrl);
         }
     }
 }

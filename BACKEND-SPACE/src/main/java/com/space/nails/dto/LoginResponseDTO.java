@@ -11,12 +11,14 @@ public class LoginResponseDTO {
     private String avatar;
     private LocalDate dataValidade;
     private String endereco; // Novo
+    private String localizacaoUrl;
+    private String codigoConvite;
 
     public LoginResponseDTO() {
     }
 
     public LoginResponseDTO(String token, String nome, String email, String role, Long userId, String avatar,
-            LocalDate dataValidade, String endereco) {
+            LocalDate dataValidade, String endereco, String localizacaoUrl, String codigoConvite) {
         this.token = token;
         this.nome = nome;
         this.email = email;
@@ -25,6 +27,8 @@ public class LoginResponseDTO {
         this.avatar = avatar;
         this.dataValidade = dataValidade;
         this.endereco = endereco;
+        this.localizacaoUrl = localizacaoUrl;
+        this.codigoConvite = codigoConvite;
     }
 
     public static LoginResponseDTOBuilder builder() {
@@ -63,6 +67,14 @@ public class LoginResponseDTO {
         return endereco;
     }
 
+    public String getLocalizacaoUrl() {
+        return localizacaoUrl;
+    }
+
+    public String getCodigoConvite() {
+        return codigoConvite;
+    }
+
     public static class LoginResponseDTOBuilder {
         private String token;
         private String nome;
@@ -71,7 +83,10 @@ public class LoginResponseDTO {
         private Long userId;
         private String avatar;
         private LocalDate dataValidade;
+
         private String endereco;
+        private String localizacaoUrl;
+        private String codigoConvite;
 
         public LoginResponseDTOBuilder token(String token) {
             this.token = token;
@@ -113,8 +128,19 @@ public class LoginResponseDTO {
             return this;
         }
 
+        public LoginResponseDTOBuilder localizacaoUrl(String localizacaoUrl) {
+            this.localizacaoUrl = localizacaoUrl;
+            return this;
+        }
+
+        public LoginResponseDTOBuilder codigoConvite(String codigoConvite) {
+            this.codigoConvite = codigoConvite;
+            return this;
+        }
+
         public LoginResponseDTO build() {
-            return new LoginResponseDTO(token, nome, email, role, userId, avatar, dataValidade, endereco);
+            return new LoginResponseDTO(token, nome, email, role, userId, avatar, dataValidade, endereco,
+                    localizacaoUrl, codigoConvite);
         }
     }
 }

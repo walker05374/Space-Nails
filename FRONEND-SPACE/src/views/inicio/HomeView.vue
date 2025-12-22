@@ -1,9 +1,10 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import api from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import PortfolioView from '@/views/portfolio/PortfolioView.vue';
 
 // --- CONFIGURAÇÃO ---
 const TELEFONE_ADMIN = '5500000000000'; // SEU WHATSAPP AQUI
@@ -21,7 +22,10 @@ const carregando = ref(true);
 const modalAgendaOpen = ref(false);
 const modalClienteOpen = ref(false);
 const modalServicoOpen = ref(false);
+
 const modalConfigAgendaOpen = ref(false); // Novo ModalAgenda
+const configLocalizacao = ref({ endereco: '', localizacaoUrl: '' }); // Estado para localização
+const userMenuOpen = ref(false); // Dropdown do Usuário
 
 const agendaConfig = ref([]); // Lista de configs
 
@@ -56,6 +60,39 @@ const novoAgendamento = ref({
 
 const novoCliente = ref({ nome: '', telefone: '', endereco: '' });
 const novoServico = ref({ nome: '', valor: '' });
+
+// --- SLOTS ---
+const slotsDisponiveis = ref([]);
+const carregandoSlots = ref(false);
+
+watch(() => [novoAgendamento.value.data, novoAgendamento.value.servicoSelecionado], () => {
+   buscarSlots(); 
+});
+
+async function buscarSlots() {
+    // Só busca se tiver data e serviço (e não for custom)
+    if (!novoAgendamento.value.data || !novoAgendamento.value.servicoSelecionado || novoAgendamento.value.servicoSelecionado === 'custom') {
+        slotsDisponiveis.value = [];
+        return;
+    }
+    
+    carregandoSlots.value = true;
+    try {
+        const res = await api.get('/api/public/agendamento/slots', {
+            params: {
+                data: novoAgendamento.value.data,
+                servicoId: novoAgendamento.value.servicoSelecionado,
+                profissionalId: auth.user.id
+            }
+        });
+        slotsDisponiveis.value = res.data;
+    } catch (e) {
+        console.error("Erro ao buscar slots", e);
+        slotsDisponiveis.value = [];
+    } finally {
+        carregandoSlots.value = false;
+    }
+}
 
 // --- FUNÇÃO DE DATA SEGURA ---
 function criarDataLocal(dataString) {
@@ -301,10 +338,19 @@ function abrirWhatsappRenovacao() {
 
 // --- LINK DE AGENDAMENTO ---
 const meuLinkAgendamento = computed(() => {
-    if (!auth.user?.nome) return '';
-    const slug = auth.user.nome.split(' ')[0].toLowerCase();
-    // const slug = auth.user.nome.toLowerCase().replace(/\s+/g, '-'); // Alternativa nome completo
-    return `${window.location.origin}/agendar/${slug}`;
+    if (!auth.user) return '';
+    
+    // Prioriza o Código de Convite (Mais profissional e sigiloso)
+    if (auth.user.codigoConvite) {
+        return `${window.location.origin}/agendar/${auth.user.codigoConvite}`;
+    }
+
+    // Fallback caso não tenha código (antigo)
+    if (auth.user.nome) {
+        const slug = auth.user.nome.split(' ')[0].toLowerCase();
+        return `${window.location.origin}/agendar/${slug}`;
+    }
+    return '';
 });
 
 async function copiarMeulink() {
@@ -576,6 +622,13 @@ function formatarMoeda(valor) {
 // --- CONFIG AGENDA ---
 function abrirModalConfigAgenda() {
     carregarAgendaBackend();
+    // Carrega dados atuais do usuário para o modal
+    if (auth.user) {
+        configLocalizacao.value = {
+            endereco: auth.user.endereco || '',
+            localizacaoUrl: auth.user.localizacaoUrl || ''
+        };
+    }
     modalConfigAgendaOpen.value = true;
 }
 
@@ -622,6 +675,25 @@ async function salvarAgendaBackend() {
         }));
         
         await api.post('/api/agenda', payload);
+        
+        // Salva também os dados de localização do usuário
+        // Precisamos atualizar o usuário logado
+        if (auth.user && auth.user.id) {
+            await api.put(`/api/usuarios/${auth.user.id}`, {
+                nome: auth.user.nome, // Mantém nome
+                telefone: auth.user.telefone, // Mantém telefone (ideal seria ter campo aqui tbm, mas ok)
+                email: auth.user.email,
+                endereco: configLocalizacao.value.endereco,
+                localizacaoUrl: configLocalizacao.value.localizacaoUrl
+            });
+            
+            // Atualiza store
+            auth.user.endereco = configLocalizacao.value.endereco;
+            auth.user.localizacaoUrl = configLocalizacao.value.localizacaoUrl;
+            // Persiste no localStorage se necessário
+            localStorage.setItem('user_data', JSON.stringify(auth.user));
+        }
+
         alert("Configuração salva com sucesso!");
         modalConfigAgendaOpen.value = false;
     } catch(e) {
@@ -695,18 +767,46 @@ async function salvarAgendaBackend() {
           </div>
         </div>
 
-        <div class="flex flex-col items-end mr-1 md:mr-2">
-            <span class="text-xs md:text-sm font-bold text-[#0F172A] truncate max-w-[80px] md:max-w-none">{{ auth.user?.nome }}</span>
-            <span v-if="auth.user?.dataValidade && auth.user?.role !== 'ADMIN'"
-                  @click="abrirWhatsappRenovacao"
-                  class="hidden sm:block text-[10px] font-bold cursor-pointer hover:underline transition-colors whitespace-nowrap"
-                  :class="alertaVencimento ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-[#DB2777]'">
-               Validade: {{ formatarDataSimples(auth.user.dataValidade) }}
-            </span>
-        </div>
 
-        <button @click="abrirModalConfigAgenda" class="text-[10px] md:text-xs text-[#DB2777] font-bold border border-pink-100 bg-pink-50 px-2 md:px-3 py-1.5 rounded-lg hover:bg-pink-100 mr-1 md:mr-2">⚙️ AGENDA</button>
-        <button @click="auth.logout" class="text-[10px] md:text-xs text-red-500 font-bold border border-red-100 px-2 md:px-3 py-1.5 rounded-lg hover:bg-red-50 shrink-0">SAIR</button>
+        <!-- User Dropdown (Substitui botões soltos) -->
+        <div class="relative ml-2" @click.stop="userMenuOpen = !userMenuOpen">
+            <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 pr-2 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                <div class="w-8 h-8 rounded-full bg-[#DB2777] flex items-center justify-center text-white font-bold text-xs">
+                    {{ auth.user?.nome?.charAt(0).toUpperCase() }}
+                </div>
+                <div class="hidden md:flex flex-col items-start">
+                    <span class="text-xs font-bold text-[#0F172A] truncate max-w-[100px]">{{ auth.user?.nome?.split(' ')[0] }}</span>
+                    <span class="text-[9px] text-gray-400">Profissional</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+
+            <!-- Menu Flutuante -->
+            <div v-if="userMenuOpen" 
+                 class="absolute top-12 right-0 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-fade-in flex flex-col gap-1">
+                 
+                 <div class="px-3 py-2 border-b border-gray-50 mb-1">
+                     <p class="text-xs font-bold text-[#0F172A]">Minha Conta</p>
+                     <p v-if="auth.user?.dataValidade" class="text-[10px] text-gray-400 mt-0.5">
+                        Validade: <span :class="alertaVencimento ? 'text-red-500 font-bold' : ''">{{ formatarDataSimples(auth.user.dataValidade) }}</span>
+                     </p>
+                 </div>
+
+                 <button @click="abrirModalConfigAgenda" class="w-full text-left px-3 py-2 text-xs font-medium text-gray-600 hover:bg-pink-50 hover:text-[#DB2777] rounded-xl flex items-center gap-2 transition-colors">
+                    ⚙️ Configurar Agenda
+                 </button>
+                 
+                 <button @click="abrirWhatsappRenovacao" class="w-full text-left px-3 py-2 text-xs font-medium text-gray-600 hover:bg-pink-50 hover:text-[#DB2777] rounded-xl flex items-center gap-2 transition-colors">
+                    💳 Renovar Assinatura
+                 </button>
+
+                 <div class="h-px bg-gray-50 my-1"></div>
+
+                 <button @click="auth.logout" class="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-2 transition-colors">
+                    🚪 Sair do Sistema
+                 </button>
+            </div>
+        </div>
       </div>
     </header>
 
@@ -714,10 +814,13 @@ async function salvarAgendaBackend() {
       
       <div class="bg-white p-1.5 rounded-2xl shadow-sm inline-flex w-full md:w-auto border border-gray-100 mb-2 overflow-x-auto">
         <button @click="abaPrincipal = 'dashboard'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'dashboard' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Relatório</button>
+        <button @click="abaPrincipal = 'portfolio'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'portfolio' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Portfólio</button>
         <button @click="abaPrincipal = 'agendamentos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'agendamentos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Agendamentos</button>
         <button @click="abaPrincipal = 'clientes'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'clientes' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Clientes</button>
         <button @click="abaPrincipal = 'servicos'" :class="['flex-1 md:w-32 py-2 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap', abaPrincipal === 'servicos' ? 'bg-[#DB2777] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50']">Serviços</button>
       </div>
+
+      <PortfolioView v-if="abaPrincipal === 'portfolio'" />
 
       <div v-if="abaPrincipal === 'dashboard'" class="space-y-6 animate-fade-in">
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -979,11 +1082,8 @@ async function salvarAgendaBackend() {
             <option value="" disabled>Selecione a Cliente...</option>
             <option v-for="c in clientes" :value="c.id" :key="c.id">{{ c.nome }}</option>
           </select>
-          <div class="grid grid-cols-2 gap-3">
-            <input type="date" v-model="novoAgendamento.data" class="input-modern">
-            <input type="time" v-model="novoAgendamento.hora" class="input-modern">
-          </div>
-          <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+          
+           <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
             <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">O que vamos fazer?</label>
             <select v-model="novoAgendamento.servicoSelecionado" class="input-modern bg-white mb-2">
               <option value="" disabled>Escolha um serviço...</option>
@@ -995,6 +1095,40 @@ async function salvarAgendaBackend() {
               <input v-model="novoAgendamento.valorCustom" type="number" placeholder="Valor (R$)" class="input-modern bg-white border-pink-200">
             </div>
           </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+                 <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block ml-1">Data</label>
+                 <input type="date" v-model="novoAgendamento.data" class="input-modern">
+            </div>
+            <div>
+                 <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block ml-1">Hora</label>
+
+                 <input type="time" v-model="novoAgendamento.hora" class="input-modern" :readonly="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" @click="novoAgendamento.servicoSelecionado !== 'custom' ? null : null"> <!-- Readonly se tiver slots -->
+            </div>
+          </div>
+          <p v-if="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" class="text-[10px] text-pink-500 font-bold ml-1">Selecione um horário abaixo 👇</p>
+
+          <!-- Seleção de Slots -->
+          <div v-if="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" class="bg-gray-50 p-3 rounded-xl border border-gray-100 animate-fade-in">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Horários Disponíveis</p>
+                
+                <div v-if="carregandoSlots" class="text-center text-xs text-gray-400 py-2">Carregando...</div>
+                
+                <div v-else-if="slotsDisponiveis.length === 0" class="text-center text-xs text-red-400 py-2">
+                    Nenhum horário livre nesta data.
+                </div>
+                
+                <div v-else class="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                    <button v-for="slot in slotsDisponiveis" :key="slot" 
+                            @click="novoAgendamento.hora = slot"
+                            class="py-1.5 px-1 rounded-lg text-xs font-bold transition-all border"
+                            :class="novoAgendamento.hora === slot ? 'bg-[#DB2777] text-white border-[#DB2777]' : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300 hover:text-pink-500'">
+                        {{ slot }}
+                    </button>
+                </div>
+          </div>
+
           <textarea v-model="novoAgendamento.observacoes" placeholder="Observações..." class="input-modern"></textarea>
           <div class="bg-[#0F172A] p-4 rounded-xl flex justify-between items-center text-white">
             <span class="text-xs font-bold uppercase text-gray-400">Total</span>
@@ -1035,7 +1169,17 @@ async function salvarAgendaBackend() {
     <div v-if="modalConfigAgendaOpen" class="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="font-bold text-[#0F172A] mb-4 text-center text-lg">Configurar Horários de Atendimento</h3>
-            <p class="text-xs text-gray-400 text-center mb-6">Defina seus horários para cada dia da semana.</p>
+            <h3 class="font-bold text-[#0F172A] mb-4 text-center text-lg">Configurar Horários de Atendimento</h3>
+            <p class="text-xs text-gray-400 text-center mb-6">Defina seus horários e a localização do seu estabelecimento.</p>
+
+            <div class="bg-blue-50 p-4 rounded-xl mb-6 border border-blue-100">
+                <h4 class="text-xs font-bold text-blue-700 uppercase mb-2">📍 Localização do Studio</h4>
+                <div class="space-y-3">
+                    <input v-model="configLocalizacao.endereco" placeholder="Endereço (Ex: Rua das Flores, 123)" class="input-modern bg-white border-blue-200">
+                    <input v-model="configLocalizacao.localizacaoUrl" placeholder="Link do Google Maps (Opcional)" class="input-modern bg-white border-blue-200">
+                    <p class="text-[10px] text-blue-500">Este endereço aparecerá no WhatsApp de lembrete e no Portfólio.</p>
+                </div>
+            </div>
             
             <div class="space-y-3">
                 <div v-for="dia in agendaConfig" :key="dia.diaSemana" class="flex flex-wrap md:flex-nowrap items-center gap-2 p-3 border rounded-xl" :class="dia.ativo ? 'bg-white border-pink-100' : 'bg-gray-50 border-gray-100 opacity-60'">
