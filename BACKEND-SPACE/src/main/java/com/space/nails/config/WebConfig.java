@@ -17,9 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(
                         "http://localhost:5173", "http://127.0.0.1:5173",
                         "http://localhost:5174", "http://127.0.0.1:5174",
-                        "http://localhost:5175", "http://127.0.0.1:5175") // URL do Frontend Vue.js (Vite pode mudar a
-                                                                          // porta se 5173 estiver ocupada)
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH") // Métodos permitidos
+                        "http://localhost:5175", "http://127.0.0.1:5175",
+                        "https://space-nails-web.onrender.com") // URL de produção no Render
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
