@@ -35,6 +35,10 @@ public class PortfolioItem {
     @Column(nullable = false)
     private LocalDateTime dataCriacao;
 
+    // ID público do Cloudinary (para facilitar exclusão)
+    @Column(length = 500)
+    private String cloudinaryPublicId;
+
     // CONSTRUTORES
     public PortfolioItem() {
         this.dataCriacao = LocalDateTime.now();
@@ -105,5 +109,13 @@ public class PortfolioItem {
 
     public void setDataCriacao(LocalDateTime dataCriacao) {
         this.dataCriacao = dataCriacao;
+    }
+
+    public String getCloudinaryPublicId() {
+        return cloudinaryPublicId;
+    }
+
+    public void setCloudinaryPublicId(String cloudinaryPublicId) {
+        this.cloudinaryPublicId = cloudinaryPublicId;
     }
 }

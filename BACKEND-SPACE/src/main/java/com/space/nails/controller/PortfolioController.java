@@ -21,14 +21,14 @@ public class PortfolioController {
     private final PortfolioRepository portfolioRepository;
     private final UsuarioRepository usuarioRepository;
     private final ServicoRepository servicoRepository;
-    private final com.space.nails.service.FileStorageService fileStorageService;
+    private final com.space.nails.service.CloudinaryService cloudinaryService;
 
     public PortfolioController(PortfolioRepository portfolioRepository, UsuarioRepository usuarioRepository,
-            ServicoRepository servicoRepository, com.space.nails.service.FileStorageService fileStorageService) {
+            ServicoRepository servicoRepository, com.space.nails.service.CloudinaryService cloudinaryService) {
         this.portfolioRepository = portfolioRepository;
         this.usuarioRepository = usuarioRepository;
         this.servicoRepository = servicoRepository;
-        this.fileStorageService = fileStorageService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     // --- ENDPOINTS PROTEGIDOS (PROFISSIONAL) ---
@@ -46,12 +46,18 @@ public class PortfolioController {
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         String finalUrl = "";
+        String cloudinaryPublicId = null;
 
         if (file != null && !file.isEmpty()) {
-            String filename = fileStorageService.store(file);
-            finalUrl = "/uploads/" + filename;
+            try {
+                finalUrl = cloudinaryService.uploadImage(file);
+                cloudinaryPublicId = cloudinaryService.extractPublicId(finalUrl);
+            } catch (Exception e) {
+                throw new RuntimeException("Erro ao fazer upload da imagem: " + e.getMessage());
+            }
         } else if (imagemUrlExterno != null && !imagemUrlExterno.isEmpty()) {
             finalUrl = imagemUrlExterno;
+            // URLs externas não têm publicId do Cloudinary
         } else {
             throw new RuntimeException("É necessário enviar uma Imagem (Arquivo) ou URL.");
         }
@@ -64,6 +70,7 @@ public class PortfolioController {
         PortfolioItem item = new PortfolioItem();
         item.setTitulo(titulo);
         item.setImagemUrl(finalUrl);
+        item.setCloudinaryPublicId(cloudinaryPublicId);
         item.setProfissional(profissional);
         item.setServico(servico);
         item.setClicks(0);
@@ -95,6 +102,16 @@ public class PortfolioController {
         if (!item.getProfissional().getId().equals(profissional.getId())
                 && profissional.getRole() != Usuario.Role.ADMIN) {
             throw new RuntimeException("Acesso negado");
+        }
+
+        // Deletar imagem do Cloudinary se existir
+        if (item.getCloudinaryPublicId() != null && !item.getCloudinaryPublicId().isEmpty()) {
+            try {
+                cloudinaryService.deleteImage(item.getCloudinaryPublicId());
+            } catch (Exception e) {
+                // Log do erro, mas não falha a operação
+                System.err.println("Erro ao deletar imagem do Cloudinary: " + e.getMessage());
+            }
         }
 
         portfolioRepository.delete(item);
