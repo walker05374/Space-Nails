@@ -25,4 +25,12 @@ public class UsuarioController {
         }
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/offline")
+    public ResponseEntity<Void> offline(@AuthenticationPrincipal Usuario usuario) {
+        if (usuario != null) {
+            usuarioService.registrarOffline(usuario.getId());
+        }
+        return ResponseEntity.ok().build();
+    }
 }

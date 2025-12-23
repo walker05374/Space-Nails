@@ -67,12 +67,15 @@ let pollingInterval = null;
 let pingInterval = null;
 
 onMounted(() => {
+  // Carrega inicial
   buscarUsuarios();
-  pollingInterval = setInterval(buscarUsuarios, 10000); // Atualiza lista a cada 10s
+  
+  // Polling silencioso a cada 5s (sem loading spinner)
+  pollingInterval = setInterval(syncUsuariosSilent, 5000);
   
   // Mantém Admin online
   pingOnline();
-  pingInterval = setInterval(pingOnline, 60000); // Ping a cada 1min
+  pingInterval = setInterval(pingOnline, 60000); 
 });
 
 onUnmounted(() => {
@@ -84,15 +87,23 @@ async function pingOnline() {
     try { await api.post('/api/usuarios/ping'); } catch(e) {}
 }
 
+
 async function buscarUsuarios() {
   carregando.value = true;
+  await syncUsuariosSilent();
+  carregando.value = false;
+}
+
+// Busca Silenciosa (Updates)
+async function syncUsuariosSilent() {
   try {
     const response = await api.get('/api/admin/usuarios');
-    usuarios.value = response.data;
+    // Só atualiza se o JSON for diferente para evitar flickers
+    if (JSON.stringify(usuarios.value) !== JSON.stringify(response.data)) {
+        usuarios.value = response.data;
+    }
   } catch (e) {
-    console.error(e);
-  } finally {
-    carregando.value = false;
+    console.error("Erro sync:", e);
   }
 }
 
@@ -304,6 +315,7 @@ async function onRestoreFileChange(e) {
             </div>
             <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
         </div>
+      </div>
     </header>
 
     <main class="p-4 md:p-6 max-w-7xl mx-auto space-y-8">
@@ -330,28 +342,7 @@ async function onRestoreFileChange(e) {
         </div>
       </section>
 
-      <!-- Ferramentas -->
-      <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-              <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              </div>
-              <div>
-                <h3 class="font-bold text-[#0F172A]">Backup do Sistema</h3>
-                <p class="text-xs text-gray-500 max-w-lg">Faça o download de todos os dados do banco de dados (Profissionais, Clientes, Agendamentos, Portfólio) para segurança.</p>
-              </div>
-          </div>
 
-          <div class="flex gap-2 w-full md:w-auto">
-             <input type="file" ref="arquivoRestore" @change="onRestoreFileChange" class="hidden" accept=".sql">
-             <button @click="triggerRestore" class="flex-1 md:flex-none border border-red-200 text-red-500 px-6 py-3 rounded-xl text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
-                  ⚠️ RESTAURAR
-             </button>
-             <button @click="fazerBackup" class="flex-1 md:flex-none bg-[#0F172A] text-white px-6 py-3 rounded-xl text-xs font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                  📥 BAIXAR DADOS
-             </button>
-          </div>
-      </section>
 
       <section class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-wrap gap-4">

@@ -219,6 +219,14 @@ public class UsuarioService {
         }
     }
 
+    public void registrarOffline(Long id) {
+        Usuario user = usuarioRepository.findById(id).orElse(null);
+        if (user != null) {
+            user.setUltimoAcesso(null); // Define como null para aparecer offline imediatamente
+            usuarioRepository.save(user);
+        }
+    }
+
     public void requestPasswordReset(String email) {
         Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
 
