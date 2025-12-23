@@ -722,9 +722,9 @@ async function salvarAgendaBackend() {
         // Salva também os dados de localização do usuário
         // Precisamos atualizar o usuário logado
         if (auth.user && auth.user.id) {
-            await api.put(`/api/usuarios/${auth.user.id}`, {
-                nome: auth.user.nome, // Mantém nome
-                telefone: auth.user.telefone, // Mantém telefone (ideal seria ter campo aqui tbm, mas ok)
+            await api.put('/api/perfil/me', {
+                nome: auth.user.nome,
+                telefone: auth.user.telefone,
                 email: auth.user.email,
                 endereco: configLocalizacao.value.endereco,
                 localizacaoUrl: configLocalizacao.value.localizacaoUrl
