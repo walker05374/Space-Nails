@@ -13,27 +13,13 @@ onMounted(() => {
     document.documentElement.classList.add('high-contrast');
   }
 
-  // Script VLibras mantido
-  if (!document.getElementById('vlibras-script')) {
-    const script = document.createElement('script');
-    script.id = 'vlibras-script';
-    script.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
-    script.async = true;
-    script.onload = () => {
-      new window.VLibras.Widget('https://vlibras.gov.br/app');
-    };
-    document.body.appendChild(script);
-  }
+
+
 });
 </script>
 
 <template>
-  <div vw class="enabled">
-    <div vw-access-button class="active"></div>
-    <div vw-plugin-wrapper>
-      <div class="vw-plugin-top-wrapper"></div>
-    </div>
-  </div>
+
 
   <div class="fixed bottom-24 right-4 z-[9999] flex flex-col-reverse items-end gap-3">
     
