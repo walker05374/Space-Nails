@@ -18,13 +18,16 @@ public class ClienteController {
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final com.space.nails.repository.AgendamentoRepository agendamentoRepository;
+    private final com.space.nails.repository.NotificacaoRepository notificacaoRepository;
 
     public ClienteController(ClienteRepository clienteRepository,
             UsuarioRepository usuarioRepository,
-            com.space.nails.repository.AgendamentoRepository agendamentoRepository) {
+            com.space.nails.repository.AgendamentoRepository agendamentoRepository,
+            com.space.nails.repository.NotificacaoRepository notificacaoRepository) {
         this.clienteRepository = clienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
+        this.notificacaoRepository = notificacaoRepository;
     }
 
     private Usuario getUsuarioLogado() {
@@ -82,17 +85,26 @@ public class ClienteController {
                 throw new RuntimeException("Acesso negado: Você não pode excluir este cliente.");
             }
 
-            // 1. Verificaa se tem agendamentos futuros
-            if (agendamentoRepository.existsByClienteAndDataHoraAfter(cliente, java.time.LocalDateTime.now())) {
+            // 1. Verificaa se tem agendamentos futuros (CANCELDOS NAO CONTAM COMO BLOQUEIO)
+            if (agendamentoRepository.existsByClienteAndDataHoraAfterAndStatusNot(cliente,
+                    java.time.LocalDateTime.now(), com.space.nails.model.StatusAgendamento.CANCELADO)) {
                 throw new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.CONFLICT,
-                        "Este cliente possui agendamentos futuros. Cancele-os antes de excluir.");
+                        "Este cliente possui agendamentos futuros PENDENTES. Cancele-os antes de excluir.");
             }
 
             List<com.space.nails.model.Agendamento> agendamentos = agendamentoRepository.findByCliente(cliente);
+
+            // 2. Apaga notificações vinculadas aos agendamentos antes de apagar os
+            // agendamentos
+            for (com.space.nails.model.Agendamento a : agendamentos) {
+                notificacaoRepository.deleteByAgendamento(a);
+            }
+
+            // 3. Apaga agendamentos
             agendamentoRepository.deleteAll(agendamentos);
 
-            // 2. Remove o cliente
+            // 4. Remove o cliente
             clienteRepository.delete(cliente);
             return ResponseEntity.noContent().build();
         } catch (org.springframework.web.server.ResponseStatusException e) {

@@ -1,0 +1,422 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.space.nails:space.nails >---------------------
+[INFO] Building space.nails 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ space.nails ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ space.nails ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ space.nails ---
+[INFO] skip non existing resourceDirectory C:\Users\Walker\Documents\GitHub\Space-Nails\BACKEND-SPACE\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ space.nails ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.2:test (default-test) @ space.nails ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.space.nails.AgendamentoIntegrationTest
+08:28:21.783 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.space.nails.AgendamentoIntegrationTest]: AgendamentoIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+08:28:21.897 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.space.nails.Application for test class com.space.nails.AgendamentoIntegrationTest
+08:28:22.061 [main] INFO org.springframework.boot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.0)
+
+2025-12-23T08:28:22.324-03:00  INFO 13716 --- [           main] c.s.nails.AgendamentoIntegrationTest     : Starting AgendamentoIntegrationTest using Java 17.0.17 with PID 13716 (started by Walker in C:\Users\Walker\Documents\GitHub\Space-Nails\BACKEND-SPACE)
+2025-12-23T08:28:22.326-03:00  INFO 13716 --- [           main] c.s.nails.AgendamentoIntegrationTest     : No active profile set, falling back to 1 default profile: "default"
+2025-12-23T08:28:23.040-03:00  INFO 13716 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-12-23T08:28:23.113-03:00  INFO 13716 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 63 ms. Found 7 JPA repository interfaces.
+2025-12-23T08:28:23.618-03:00  INFO 13716 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-12-23T08:28:23.682-03:00  INFO 13716 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.2.Final
+2025-12-23T08:28:23.722-03:00  INFO 13716 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-12-23T08:28:24.058-03:00  INFO 13716 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-12-23T08:28:24.093-03:00  INFO 13716 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-12-23T08:28:26.381-03:00  INFO 13716 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5503c7d
+2025-12-23T08:28:26.383-03:00  INFO 13716 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-12-23T08:28:26.683-03:00  WARN 13716 --- [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-12-23T08:28:27.257-03:00  INFO 13716 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.1
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-12-23T08:28:28.171-03:00  INFO 13716 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-12-23T08:28:38.079-03:00  INFO 13716 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-12-23T08:28:38.430-03:00  INFO 13716 --- [           main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-12-23T08:28:38.430-03:00  WARN 13716 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-12-23T08:28:38.505-03:00  INFO 13716 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-12-23T08:28:39.306-03:00  WARN 13716 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-12-23T08:28:40.036-03:00  INFO 13716 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2025-12-23T08:28:40.036-03:00  INFO 13716 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2025-12-23T08:28:40.037-03:00  INFO 13716 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2025-12-23T08:28:40.062-03:00  INFO 13716 --- [           main] c.s.nails.AgendamentoIntegrationTest     : Started AgendamentoIntegrationTest in 18.013 seconds (process running for 18.903)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        s1_0.id,
+        s1_0.nome,
+        s1_0.profissional_id,
+        s1_0.tempo_estimado_minutos,
+        s1_0.valor 
+    from
+        servicos s1_0 
+    where
+        s1_0.profissional_id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.codigo_convite=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        s1_0.id,
+        s1_0.nome,
+        s1_0.profissional_id,
+        s1_0.tempo_estimado_minutos,
+        s1_0.valor 
+    from
+        servicos s1_0 
+    where
+        s1_0.profissional_id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.ativo,
+        u1_0.codigo_convite,
+        u1_0.data_validade,
+        u1_0.email,
+        u1_0.endereco,
+        u1_0.foto_url,
+        u1_0.localizacao_url,
+        u1_0.nome,
+        u1_0.reset_token,
+        u1_0.role,
+        u1_0.senha,
+        u1_0.telefone 
+    from
+        usuarios u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        s1_0.id,
+        s1_0.nome,
+        p1_0.id,
+        p1_0.ativo,
+        p1_0.codigo_convite,
+        p1_0.data_validade,
+        p1_0.email,
+        p1_0.endereco,
+        p1_0.foto_url,
+        p1_0.localizacao_url,
+        p1_0.nome,
+        p1_0.reset_token,
+        p1_0.role,
+        p1_0.senha,
+        p1_0.telefone,
+        s1_0.tempo_estimado_minutos,
+        s1_0.valor 
+    from
+        servicos s1_0 
+    left join
+        usuarios p1_0 
+            on p1_0.id=s1_0.profissional_id 
+    where
+        s1_0.id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.avatar_url,
+        c1_0.data_cadastro,
+        c1_0.nome,
+        c1_0.observacoes,
+        c1_0.profissional_id,
+        c1_0.telefone 
+    from
+        clientes c1_0 
+    where
+        c1_0.telefone=?
+Hibernate: 
+    select
+        count(a1_0.id)>0 
+    from
+        agendamentos a1_0 
+    where
+        a1_0.profissional_id=? 
+        and a1_0.data_hora=? 
+        and a1_0.status<>'CANCELADO'
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/public/agendar
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"117"]
+             Body = {"servicoId":9,"dataHora":"2025-12-24T10:00:00","nomeCliente":"Cliente Teste Auto","telefoneCliente":"5511999999999"}
+    Session Attrs = {}
+
+Handler:
+             Type = com.space.nails.controller.PublicAgendamentoController
+           Method = com.space.nails.controller.PublicAgendamentoController#agendar(PublicAgendamentoDTO)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = java.lang.RuntimeException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 500
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"message":"Horário não está mais disponível.","error":"Ocorreu um erro inesperado no servidor."}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /api/public/agendar
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"117"]
+             Body = {"servicoId":9,"dataHora":"2025-12-24T10:00:00","nomeCliente":"Cliente Teste Auto","telefoneCliente":"5511999999999"}
+    Session Attrs = {}
+
+Handler:
+             Type = com.space.nails.controller.PublicAgendamentoController
+           Method = com.space.nails.controller.PublicAgendamentoController#agendar(PublicAgendamentoDTO)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = java.lang.RuntimeException
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 500
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json", X-Content-Type-Options:"nosniff", X-XSS-Protection:"0", Cache-Control:"no-cache, no-store, max-age=0, must-revalidate", Pragma:"no-cache", Expires:"0", X-Frame-Options:"DENY"]
+     Content type = application/json
+             Body = {"message":"Horário não está mais disponível.","error":"Ocorreu um erro inesperado no servidor."}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 23.74 s <<< FAILURE! -- in com.space.nails.AgendamentoIntegrationTest
+[ERROR] com.space.nails.AgendamentoIntegrationTest.deveCriarAgendamentoComSucesso -- Time elapsed: 2.299 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<500>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:61)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:128)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:640)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.space.nails.AgendamentoIntegrationTest.deveCriarAgendamentoComSucesso(AgendamentoIntegrationTest.java:106)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   AgendamentoIntegrationTest.deveCriarAgendamentoComSucesso:106 Status expected:<200> but was:<500>
+[INFO] 
+[ERROR] Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  27.794 s
+[INFO] Finished at: 2025-12-23T08:28:47-03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project space.nails: There are test failures.
+[ERROR] 
+[ERROR] See C:\Users\Walker\Documents\GitHub\Space-Nails\BACKEND-SPACE\target\surefire-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

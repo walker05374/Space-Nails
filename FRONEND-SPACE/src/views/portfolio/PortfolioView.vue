@@ -8,15 +8,24 @@ const fotos = ref([]);
 const servicos = ref([]);
 const carregando = ref(true);
 const erro = ref(null);
+const fotoSelecionada = ref(null);
 
 const novaFoto = ref({
   titulo: '',
   imagemUrl: '',
   file: null, // Novo campo para arquivo
-  servicoId: null
+  servicoId: null,
 });
 
 const arquivoSelecionado = ref(null); // Ref para o input file
+
+function abrirFoto(foto) {
+    fotoSelecionada.value = foto;
+}
+
+function fecharFoto() {
+    fotoSelecionada.value = null;
+}
 
 onMounted(() => {
     carregarFotos();
@@ -174,7 +183,7 @@ async function excluirFoto(id) {
         
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div v-for="foto in fotos" :key="foto.id" class="group relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
-                <div class="aspect-square bg-gray-100 relative overflow-hidden">
+                <div class="aspect-square bg-gray-100 relative overflow-hidden cursor-pointer" @click="abrirFoto(foto)">
                     <img :src="foto.imagemUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Portfolio">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button class="bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-sm transition-colors" title="Ver Fullscreen">👁️</button>
@@ -193,6 +202,25 @@ async function excluirFoto(id) {
                     <button @click="excluirFoto(foto.id)" class="mt-3 w-full py-2 text-xs font-bold text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
                         Excluir
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIGHTBOX / MODAL DE VISUALIZAÇÃO -->
+        <div v-if="fotoSelecionada" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in" @click.self="fecharFoto">
+            <button @click="fecharFoto" class="absolute top-4 right-4 text-white/50 hover:text-white p-2 transition-colors z-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+
+            <div class="max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+                <img :src="fotoSelecionada.imagemUrl" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl mb-4">
+                
+                <div class="text-center text-white">
+                    <h2 class="text-xl font-bold">{{ fotoSelecionada.titulo }}</h2>
+                    <p class="text-pink-400 font-medium text-sm mt-1">
+                        {{ servicos.find(s => s.id === fotoSelecionada.servico?.id)?.nome || 'Geral' }}
+                    </p>
+                    <p class="text-[10px] text-gray-400 mt-2">Visualizações: {{ fotoSelecionada.clicks || 0 }}</p>
                 </div>
             </div>
         </div>

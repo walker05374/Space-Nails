@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
 
@@ -24,7 +24,8 @@ const stats = computed(() => {
   return {
     total: usuarios.value.length,
     ativos: usuarios.value.filter(u => u.ativo).length,
-    vencidos: usuarios.value.filter(u => !u.ativo).length
+    vencidos: usuarios.value.filter(u => !u.ativo).length,
+    online: usuarios.value.filter(u => u.online).length
   };
 });
 
@@ -61,7 +62,27 @@ const usuariosVencendo = computed(() => {
 
 const alertasPendentes = computed(() => usuariosVencendo.value.length);
 
-onMounted(buscarUsuarios);
+
+let pollingInterval = null;
+let pingInterval = null;
+
+onMounted(() => {
+  buscarUsuarios();
+  pollingInterval = setInterval(buscarUsuarios, 10000); // Atualiza lista a cada 10s
+  
+  // Mantém Admin online
+  pingOnline();
+  pingInterval = setInterval(pingOnline, 60000); // Ping a cada 1min
+});
+
+onUnmounted(() => {
+  if (pollingInterval) clearInterval(pollingInterval);
+  if (pingInterval) clearInterval(pingInterval);
+});
+
+async function pingOnline() {
+    try { await api.post('/api/usuarios/ping'); } catch(e) {}
+}
 
 async function buscarUsuarios() {
   carregando.value = true;
@@ -117,7 +138,8 @@ function abrirEdicao(usuario) {
   if (usuario.dataValidade) {
       dataPura = usuario.dataValidade.split('T')[0];
   }
-  usuarioSelecionado.value = { ...usuario, dataValidade: dataPura };
+  // Inicializa novaSenha vazio para não enviar se não for alterar
+  usuarioSelecionado.value = { ...usuario, dataValidade: dataPura, novaSenha: '' };
   mostrarModalEdicao.value = true;
 }
 
@@ -134,6 +156,32 @@ function formatarData(data) {
   const d = criarDataLocal(data);
   if (!d) return 'Vitalício';
   return d.toLocaleDateString('pt-BR');
+}
+
+function calcularDiasRestantes(data) {
+    if (!data) return null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const validade = criarDataLocal(data);
+    if (!validade) return null;
+    
+    // Diferença em ms
+    const diff = validade - hoje;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function adicionarDiasValidade(dias) {
+    let base = new Date();
+    // Se já tem data válida futura, adiciona a partir dela. Se não, a partir de hoje.
+    if (usuarioSelecionado.value.dataValidade) {
+        const atual = criarDataLocal(usuarioSelecionado.value.dataValidade);
+        if (atual && atual > base) {
+            base = atual;
+        }
+    }
+    
+    base.setDate(base.getDate() + dias);
+    usuarioSelecionado.value.dataValidade = base.toISOString().split('T')[0];
 }
 
 // Verifica se já venceu (para exibição no template)
@@ -250,13 +298,17 @@ async function onRestoreFileChange(e) {
 
         <div class="h-6 w-px bg-gray-200 mx-1"></div>
 
-        <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
-      </div>
+        <div class="flex items-center gap-4">
+            <div v-if="alertaBackup" class="hidden md:flex items-center gap-2 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-lg border border-yellow-200 animate-pulse" title="Faça um backup urgente!">
+                <span class="text-xs font-bold">⚠️ Backup Pendente ({{ diasDesdeBackup }} dias)</span>
+            </div>
+            <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
+        </div>
     </header>
 
     <main class="p-4 md:p-6 max-w-7xl mx-auto space-y-8">
       
-      <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <section class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <span class="text-xs font-bold text-gray-400 uppercase">Total Usuários</span>
           <p class="text-3xl font-bold text-[#0F172A] mt-1">{{ stats.total }}</p>
@@ -264,6 +316,13 @@ async function onRestoreFileChange(e) {
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <span class="text-xs font-bold text-green-600 uppercase">Ativos</span>
           <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.ativos }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <span class="text-xs font-bold text-blue-500 uppercase">Online Agora</span>
+          <p class="text-3xl font-bold text-blue-500 mt-1 flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+              {{ stats.online }}
+          </p>
         </div>
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <span class="text-xs font-bold text-red-500 uppercase">Inativos/Vencidos</span>
@@ -310,6 +369,7 @@ async function onRestoreFileChange(e) {
               <tr>
                 <th class="p-4 text-xs font-bold text-gray-500 uppercase">Usuário</th>
                 <th class="p-4 text-xs font-bold text-gray-500 uppercase">Validade</th>
+                <th class="p-4 text-xs font-bold text-gray-500 uppercase text-center">Cód.</th>
                 <th class="p-4 text-xs font-bold text-gray-500 uppercase text-center">Status</th>
                 <th class="p-4 text-xs font-bold text-gray-500 uppercase text-right">Ações</th>
               </tr>
@@ -319,6 +379,7 @@ async function onRestoreFileChange(e) {
                 <td class="p-4">
                   <div class="flex flex-col">
                     <span class="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                      <span v-if="user.online" class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse border-2 border-white shadow-sm" title="Online Agora"></span>
                       {{ user.nome }}
                       <span v-if="isVencido(user) && user.ativo" class="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">VENCIDO</span>
                       <span v-else-if="isVencendo(user) && user.ativo" class="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold whitespace-nowrap">VENCE EM BREVE</span>
@@ -333,7 +394,17 @@ async function onRestoreFileChange(e) {
                    <span v-else :class="{
                      'text-red-500 font-bold': !user.ativo || isVencido(user),
                      'text-orange-500 font-bold': isVencendo(user)
-                   }">{{ formatarData(user.dataValidade) }}</span>
+                   }">
+                     {{ formatarData(user.dataValidade) }}
+                     <span class="text-[10px] ml-1 opacity-75"
+                        :class="calcularDiasRestantes(user.dataValidade) < 0 ? 'text-red-600' : 'text-gray-500'">
+                        ({{ calcularDiasRestantes(user.dataValidade) }} dias)
+                     </span>
+                   </span>
+                </td>
+
+                <td class="p-4 text-center">
+                   <span class="font-mono text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded select-all">{{ user.codigoConvite || '---' }}</span>
                 </td>
 
                 <td class="p-4 text-center">
@@ -363,6 +434,39 @@ async function onRestoreFileChange(e) {
           </table>
         </div>
       </section>
+
+
+      <!-- SEÇÃO DE BACKUP -->
+      <section class="bg-slate-800 rounded-3xl p-8 text-white relative overflow-hidden">
+          <div class="absolute right-0 top-0 w-64 h-64 bg-slate-700/50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+          
+          <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                  <h3 class="text-xl font-bold flex items-center gap-2">
+                    🛡️ Segurança do Sistema
+                    <span v-if="alertaBackup" class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">Backup Pendente</span>
+                  </h3>
+                  <p class="text-slate-400 text-sm mt-1 max-w-xl">
+                      Faça backups regulares para garantir a segurança dos dados. O arquivo gerado contém todos os usuários, agendamentos e clientes.
+                      <br>
+                      <span class="text-xs opacity-50 block mt-2">Último backup: {{ ultimoBackup ? formatarData(ultimoBackup) : 'Nunca realizado' }}</span>
+                  </p>
+              </div>
+
+              <div class="flex gap-4">
+                  <input type="file" ref="backupInput" class="hidden" accept=".json" @change="processarRestore">
+                  
+                  <button @click="triggerRestore" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-colors text-gray-300 border border-slate-600 hover:border-slate-500">
+                     📥 Restaurar Dados
+                  </button>
+
+                  <button @click="fazerBackup" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:scale-105 flex items-center gap-2">
+                     💾 Fazer Backup Agora
+                  </button>
+              </div>
+          </div>
+      </section>
+
     </main>
 
     <div v-if="mostrarModalCadastro" class="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -392,9 +496,21 @@ async function onRestoreFileChange(e) {
           <div class="text-xs text-gray-400 font-bold uppercase mb-1">Dados Básicos</div>
           <input v-model="usuarioSelecionado.nome" class="input-modern" placeholder="Nome">
           
+          <div class="text-xs text-gray-400 font-bold uppercase mt-4 mb-1">Credenciais de Acesso</div>
+          <input v-model="usuarioSelecionado.email" type="email" class="input-modern" placeholder="E-mail de Login">
+          <input v-model="usuarioSelecionado.novaSenha" type="password" class="input-modern" placeholder="Nova Senha (deixe em branco para manter)">
+          
           <div v-if="usuarioSelecionado.role !== 'ADMIN'">
              <div class="text-xs text-gray-400 font-bold uppercase mt-4 mb-1">Renovação de Assinatura</div>
-             <input type="date" v-model="usuarioSelecionado.dataValidade" class="input-modern">
+             <input type="date" v-model="usuarioSelecionado.dataValidade" class="input-modern mb-2">
+             
+             <!-- Botões de Renovação Rápida -->
+             <div class="flex gap-2 flex-wrap">
+                 <button @click="adicionarDiasValidade(30)" class="px-3 py-1.5 bg-green-50 text-green-700 text-[10px] font-bold rounded-lg border border-green-200 hover:bg-green-100">+30 Dias</button>
+                 <button @click="adicionarDiasValidade(60)" class="px-3 py-1.5 bg-green-50 text-green-700 text-[10px] font-bold rounded-lg border border-green-200 hover:bg-green-100">+60 Dias</button>
+                 <button @click="adicionarDiasValidade(90)" class="px-3 py-1.5 bg-green-50 text-green-700 text-[10px] font-bold rounded-lg border border-green-200 hover:bg-green-100">+90 Dias</button>
+                 <button @click="adicionarDiasValidade(365)" class="px-3 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100">+1 Ano</button>
+             </div>
           </div>
           <div v-else class="bg-purple-50 text-purple-600 p-3 rounded-xl text-xs font-bold text-center">
              Este usuário é Administrador (Acesso Vitalício)

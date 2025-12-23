@@ -52,7 +52,10 @@ async function fazerLogin() {
         email: userData.email, 
         role: userData.role, 
         avatar: userData.avatar,
-        dataValidade: userData.dataValidade // <--- IMPORTANTE
+        dataValidade: userData.dataValidade, // <--- IMPORTANTE
+        codigoConvite: userData.codigoConvite, // <--- NOVIDADE: Obrigatório para links
+        endereco: userData.endereco,
+        localizacaoUrl: userData.localizacaoUrl
     }, userData.token);
     
     if (userData.role === 'ADMIN') {

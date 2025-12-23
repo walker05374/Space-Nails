@@ -18,6 +18,13 @@
                 🏠 {{ enderecoProfissional }}
             </span>
         </div>
+
+         <!-- BOTÃO PORTFÓLIO -->
+         <div class="text-center mb-6 mt-4">
+            <button @click="$router.push(`/portfolio/public/${route.params.slug}`)" class="text-xs font-bold text-[#DB2777] underline decoration-pink-300 decoration-2 underline-offset-4 hover:text-pink-700 transition-colors">
+                ✨ Conheça um pouco do meu trabalho
+            </button>
+         </div>
       </div>
 
       <!-- Passo 0: Escolha Inicial -->
@@ -234,27 +241,40 @@
     </div>
 
     <!-- MODAL GALERIA -->
-    <div v-if="modalGaleriaOpen" class="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-fade-in" @click.self="modalGaleriaOpen = false">
-        <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl relative max-h-[80vh] flex flex-col">
-            <button @click="modalGaleriaOpen = false" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold bg-gray-50 p-2 rounded-full transition-colors">
-                ✕
-            </button>
+    <div v-if="modalGaleriaOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="modalGaleriaOpen = false">
+        <!-- Backdrop Blur -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+        <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl relative flex flex-col max-h-[85vh] z-10 animate-scale-in overflow-hidden">
             
-            <h3 class="text-lg font-bold text-[#0F172A] mb-4 pr-10">Fotos: <span class="text-[#DB2777]">{{ servicoGaleriaNome }}</span></h3>
-            
-            <div v-if="carregandoFotos" class="flex-1 flex items-center justify-center min-h-[200px]">
-                <span class="text-pink-500 font-bold animate-pulse">Carregando fotos...</span>
+            <!-- Header Galeria -->
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                <h3 class="text-lg font-bold text-[#0F172A] m-0 border-0 p-0">
+                    Fotos: <span class="text-[#DB2777]">{{ servicoGaleriaNome }}</span>
+                </h3>
+                
+                <button @click="modalGaleriaOpen = false" class="text-gray-400 hover:text-[#DB2777] p-2 rounded-full hover:bg-pink-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             
-            <div v-else-if="fotosGaleria.length === 0" class="flex-1 flex flex-col items-center justify-center min-h-[200px] text-gray-400">
-                <span class="text-4xl mb-2">🖼️</span>
-                <p>Nenhuma foto cadastrada para este serviço.</p>
-            </div>
-            
-            <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-2">
-                <div v-for="foto in fotosGaleria" :key="foto.id" class="aspect-square rounded-xl overflow-hidden relative group cursor-zoom-in" @click="registrarVisualizacao(foto)">
-                    <img :src="foto.imagemUrl" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy">
-                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <!-- Grid de Fotos -->
+            <div class="p-6 overflow-y-auto custom-scrollbar bg-gray-50 flex-1">
+                <div v-if="carregandoFotos" class="flex flex-col items-center justify-center h-full py-10">
+                    <span class="w-8 h-8 border-4 border-[#DB2777] border-t-transparent rounded-full animate-spin mb-3"></span>
+                    <span class="text-pink-500 font-bold text-sm">Carregando fotos...</span>
+                </div>
+                
+                <div v-else-if="fotosGaleria.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
+                    <span class="text-5xl mb-3 grayscale opacity-50">🖼️</span>
+                    <p class="font-medium text-sm">Nenhuma foto neste portfólio.</p>
+                </div>
+                
+                <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div v-for="foto in fotosGaleria" :key="foto.id" class="aspect-square rounded-2xl overflow-hidden relative group cursor-zoom-in shadow-sm bg-white border border-gray-100" @click="registrarVisualizacao(foto)">
+                        <img :src="foto.imagemUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -525,33 +545,42 @@ const novoAgendamento = () => { // Renamed from reiniciar
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 1rem; /* Menos padding na borda da tela */
   font-family: 'Inter', sans-serif;
   position: relative;
 }
 
 .overlay-gradient {
-  display: none; /* Remove overlay antigo */
+  display: none; 
 }
 
 .booking-card {
   background: #fff;
-  padding: 2.5rem;
+  padding: 2rem; /* Reduzido de 2.5rem */
   border-radius: 24px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); /* Sombra suave */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
   border: 1px solid #f1f5f9;
   position: relative;
   z-index: 10;
 }
 
+/* Responsividade Mobile para o Card */
+@media (max-width: 480px) {
+    .booking-card {
+        padding: 1.5rem; /* Ainda menor em mobile */
+        border-radius: 20px;
+    }
+}
+
 .title-brand {
-    font-size: 1.875rem; 
-    font-weight: 700;
+    font-size: 1.5rem; /* Um pouco menor para elegância */
+    font-weight: 800;
     color: #0F172A;
     text-align: center;
     letter-spacing: -0.025em;
+    margin-bottom: 0.25rem;
 }
 
 .text-pink { color: #DB2777; }
@@ -559,17 +588,16 @@ const novoAgendamento = () => { // Renamed from reiniciar
 .subtitle {
     text-align: center;
     color: #64748B;
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    margin-bottom: 1.5rem;
 }
 
 h3 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #334155;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
   padding-bottom: 0.5rem;
 }
 
@@ -586,9 +614,9 @@ h3 {
 
 .input-modern {
     width: 100%;
-    padding: 1rem;
+    padding: 0.875rem 1rem;
     background-color: #F8FAFC;
-    border: none;
+    border: 1px solid transparent; /* Prepare border transition */
     border-radius: 1rem;
     font-size: 0.875rem;
     font-weight: 500;
@@ -598,63 +626,72 @@ h3 {
 }
 
 .input-modern:focus {
-    box-shadow: 0 0 0 2px #DB2777;
+    background-color: #fff;
+    border-color: #DB2777;
+    box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.1);
 }
 
 .hint {
     color: #94A3B8;
     font-size: 0.75rem;
     margin-left: 0.5rem;
+    margin-top: 0.25rem;
+    display: block;
 }
 
 /* Services List */
 .service-item {
-  background: #F8FAFC;
+  background: #fff;
+  border: 1px solid #E2E8F0;
   padding: 1rem;
-  margin-bottom: 0.8rem;
-  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  border-radius: 16px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   transition: all 0.2s ease;
-  border: 1px solid transparent;
 }
 
 .service-item:hover {
-  background: #fff;
   border-color: #DB2777;
+  background-color: #FEF2F6; /* Pink 50 bem leve */
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.1);
+  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.05);
 }
 
-.service-name { font-weight: 500; color: #334155; }
-.service-price { font-weight: 700; color: #DB2777; }
+.service-name { font-weight: 600; color: #334155; font-size: 0.9rem; }
+.service-price { font-weight: 700; color: #DB2777; font-size: 0.9rem; }
 
-/* Slot Buttons */
+/* Slot Buttons - Responsivo */
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  /* Auto-fill para caber o máximo possível, min 75px */
+  grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); 
+  gap: 8px;
   margin-bottom: 2rem;
 }
 
 .slot-btn {
-  padding: 0.6rem;
-  background: #F1F5F9;
-  border: none;
-  border-radius: 8px;
+  padding: 0.75rem 0.5rem;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
   color: #475569;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s;
 }
 
-.slot-btn:hover { background: #E2E8F0; }
+.slot-btn:hover { border-color: #94A3B8; background: #F8FAFC; }
 
 .slot-btn.selected {
   background: #DB2777;
+  border-color: #DB2777;
   color: #fff;
   box-shadow: 0 4px 10px rgba(219, 39, 119, 0.3);
+  transform: scale(1.05);
 }
 
 /* Actions */
@@ -681,23 +718,26 @@ button {
 .btn-primary {
   background: #DB2777;
   color: #fff;
-  box-shadow: 0 4px 15px rgba(219, 39, 119, 0.25);
+  box-shadow: 0 8px 20px rgba(219, 39, 119, 0.2);
+}
+
+.btn-primary:hover {
+    background: #BE185D;
+    transform: translateY(-1px);
 }
 
 .btn-primary:active { transform: scale(0.98); }
-.btn-primary:disabled { background: #CBD5E1; cursor: not-allowed; box-shadow: none; }
+.btn-primary:disabled { background: #E2E8F0; color: #94A3B8; cursor: not-allowed; box-shadow: none; transform: none; }
 
 .btn-secondary {
   background: transparent;
   color: #64748B;
-  border: 1px solid #E2E8F0;
+  border: 1px solid transparent;
 }
-.btn-secondary:hover { background: #F8FAFC; color: #334155; }
+.btn-secondary:hover { background: #F1F5F9; color: #334155; }
 
-.success { text-align: center; }
-.success-icon { font-size: 4rem; margin-bottom: 1rem; display: block; }
-.error-msg { background: #FEF2F2; color: #EF4444; padding: 1rem; border-radius: 12px; margin-top: 1rem; text-align: center; font-weight: 500; font-size: 0.875rem; }
-.no-slots, .no-data { text-align: center; color: #94A3B8; padding: 1rem; font-style: italic; }
+.error-msg { background: #FEF2F2; color: #EF4444; padding: 1rem; border-radius: 12px; margin-top: 1rem; text-align: center; font-weight: 500; font-size: 0.875rem; border: 1px solid #FECACA; }
+.no-slots, .no-data { text-align: center; color: #94A3B8; padding: 1rem; font-style: italic; font-size: 0.85rem; }
 
 @media print {
   .no-print { display: none !important; }

@@ -23,9 +23,13 @@ public class AgendamentoController {
     }
 
     @PostMapping
-    public ResponseEntity<AgendamentoDTO> criar(@RequestBody AgendamentoDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return ResponseEntity.ok(agendamentoService.criarAgendamento(dto, auth.getName()));
+    public ResponseEntity<?> criar(@RequestBody AgendamentoDTO dto) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            return ResponseEntity.ok(agendamentoService.criarAgendamento(dto, auth.getName()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping
@@ -33,11 +37,13 @@ public class AgendamentoController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return ResponseEntity.ok(agendamentoService.listarMeusAgendamentos(auth.getName()));
     }
-    
+
     @PatchMapping("/{id}/status")
-    public ResponseEntity<AgendamentoDTO> atualizarStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<AgendamentoDTO> atualizarStatus(@PathVariable Long id,
+            @RequestBody Map<String, String> payload) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String novoStatus = payload.get("status");
-        return ResponseEntity.ok(agendamentoService.atualizarStatus(id, StatusAgendamento.valueOf(novoStatus), auth.getName()));
+        return ResponseEntity
+                .ok(agendamentoService.atualizarStatus(id, StatusAgendamento.valueOf(novoStatus), auth.getName()));
     }
 }

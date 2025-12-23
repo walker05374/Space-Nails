@@ -15,15 +15,15 @@ export const useAuthStore = defineStore('auth', () => {
     const isAuthenticated = computed(() => !!token.value);
     // Verifica se o perfil é RESPONSAVEL (ajustado para bater com o enum do Java)
     const isResponsavel = computed(() => user.value?.perfil === 'RESPONSAVEL');
-    
+
     // Actions
     function setLoginData(userData, tokenData) {
         user.value = userData;
         token.value = tokenData;
-        
+
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('token', tokenData);
-        
+
         // Configura o cabeçalho padrão
         axios.defaults.headers.common['Authorization'] = `Bearer ${tokenData}`;
     }
@@ -38,16 +38,20 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null;
         token.value = null;
         criancaSelecionada.value = null;
-        
+
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('crianca');
         localStorage.removeItem('filhoSelecionadoId');
-        
+
         delete axios.defaults.headers.common['Authorization'];
     }
 
-    function logout() {
+    async function logout() {
+        try {
+            await axios.post('/api/usuarios/offline');
+        } catch (e) { console.error("Erro ao notificar offline", e); }
+
         clearLoginData();
         // Redireciona via router para não recarregar a página inteira bruscamente
         router.push('/login');
@@ -58,15 +62,15 @@ export const useAuthStore = defineStore('auth', () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
     }
 
-    return { 
-        user, 
-        token, 
-        criancaSelecionada, 
-        isAuthenticated, 
+    return {
+        user,
+        token,
+        criancaSelecionada,
+        isAuthenticated,
         isResponsavel,
-        setLoginData, 
+        setLoginData,
         selecionarCrianca,
         clearLoginData,
-        logout 
+        logout
     };
 });

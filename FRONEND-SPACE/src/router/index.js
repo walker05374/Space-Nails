@@ -38,6 +38,12 @@ const router = createRouter({
       component: () => import('../views/publico/PublicBookingView.vue'),
       meta: { publico: true }
     },
+    {
+      path: '/portfolio/public/:inviteCode',
+      name: 'public-portfolio',
+      component: () => import('../views/publico/PublicPortfolioView.vue'),
+      meta: { publico: true }
+    },
     // --- ROTAS PROTEGIDAS ---
     {
       path: '/home',

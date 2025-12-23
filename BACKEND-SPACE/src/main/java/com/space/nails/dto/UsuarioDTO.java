@@ -11,14 +11,16 @@ public class UsuarioDTO {
     private String avatarUrl;
     private boolean ativo;
     private LocalDate dataValidade;
-    private String endereco; // Novo
+    private String endereco;
     private String localizacaoUrl;
+    private String codigoConvite;
+    private boolean online; // Novo
 
     public UsuarioDTO() {
     }
 
     public UsuarioDTO(Long id, String nome, String email, String role, String telefone, String avatarUrl, boolean ativo,
-            LocalDate dataValidade, String endereco, String localizacaoUrl) {
+            LocalDate dataValidade, String endereco, String localizacaoUrl, String codigoConvite, boolean online) {
         this.id = id;
         this.nome = nome;
         this.email = email;
@@ -29,6 +31,8 @@ public class UsuarioDTO {
         this.dataValidade = dataValidade;
         this.endereco = endereco;
         this.localizacaoUrl = localizacaoUrl;
+        this.codigoConvite = codigoConvite;
+        this.online = online;
     }
 
     public static UsuarioDTOBuilder builder() {
@@ -115,6 +119,22 @@ public class UsuarioDTO {
         this.localizacaoUrl = localizacaoUrl;
     }
 
+    public String getCodigoConvite() {
+        return codigoConvite;
+    }
+
+    public void setCodigoConvite(String codigoConvite) {
+        this.codigoConvite = codigoConvite;
+    }
+
+    public boolean isOnline() {
+        return online;
+    }
+
+    public void setOnline(boolean online) {
+        this.online = online;
+    }
+
     public static class UsuarioDTOBuilder {
         private Long id;
         private String nome;
@@ -126,6 +146,8 @@ public class UsuarioDTO {
         private LocalDate dataValidade;
         private String endereco;
         private String localizacaoUrl;
+        private String codigoConvite;
+        private boolean online;
 
         public UsuarioDTOBuilder id(Long id) {
             this.id = id;
@@ -177,9 +199,19 @@ public class UsuarioDTO {
             return this;
         }
 
+        public UsuarioDTOBuilder codigoConvite(String codigoConvite) {
+            this.codigoConvite = codigoConvite;
+            return this;
+        }
+
+        public UsuarioDTOBuilder online(boolean online) {
+            this.online = online;
+            return this;
+        }
+
         public UsuarioDTO build() {
             return new UsuarioDTO(id, nome, email, role, telefone, avatarUrl, ativo, dataValidade, endereco,
-                    localizacaoUrl);
+                    localizacaoUrl, codigoConvite, online);
         }
     }
 }

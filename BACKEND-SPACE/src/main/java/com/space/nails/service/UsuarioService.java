@@ -211,6 +211,14 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
+    public void atualizarUltimoAcesso(Long id) {
+        Usuario user = usuarioRepository.findById(id).orElse(null);
+        if (user != null) {
+            user.setUltimoAcesso(java.time.LocalDateTime.now());
+            usuarioRepository.save(user);
+        }
+    }
+
     public void requestPasswordReset(String email) {
         Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
 
@@ -264,6 +272,10 @@ public class UsuarioService {
                 .avatarUrl(user.getFotoUrl())
                 .ativo(statusVisual)
                 .dataValidade(user.getDataValidade())
+                .online(user.getUltimoAcesso() != null
+                        && user.getUltimoAcesso().isAfter(java.time.LocalDateTime.now().minusMinutes(2)))
+                // mapeia o código
+                .codigoConvite(user.getCodigoConvite())
                 .build();
     }
 }

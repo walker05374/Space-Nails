@@ -41,6 +41,8 @@ public class Usuario implements UserDetails {
     // Campo de Validade (Assinatura)
     private LocalDate dataValidade;
 
+    private java.time.LocalDateTime ultimoAcesso;
+
     public enum Role {
         ADMIN, PROFISSIONAL
     }
@@ -264,6 +266,14 @@ public class Usuario implements UserDetails {
 
     public void setDataValidade(LocalDate dataValidade) {
         this.dataValidade = dataValidade;
+    }
+
+    public java.time.LocalDateTime getUltimoAcesso() {
+        return ultimoAcesso;
+    }
+
+    public void setUltimoAcesso(java.time.LocalDateTime ultimoAcesso) {
+        this.ultimoAcesso = ultimoAcesso;
     }
 
     // --- USER DETAILS METHODS ---

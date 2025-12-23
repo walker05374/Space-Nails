@@ -29,6 +29,10 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
 
         boolean existsByClienteAndDataHoraAfter(com.space.nails.model.Cliente cliente, LocalDateTime dataHora);
 
+        // Validação correta para excluir cliente (Ignora CANCELADOS)
+        boolean existsByClienteAndDataHoraAfterAndStatusNot(com.space.nails.model.Cliente cliente,
+                        LocalDateTime dataHora, com.space.nails.model.StatusAgendamento status);
+
         // --- NOTIFICAÇÕES (Sistema Automático) ---
 
         // 1. Aviso de 24h antes
