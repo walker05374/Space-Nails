@@ -37,8 +37,7 @@ public class CloudinaryService {
                         "folder", "space-nails/portfolio", // Organiza em pasta
                         "resource_type", "image",
                         "transformation", ObjectUtils.asMap(
-                                "quality", "auto", // Otimização automática
-                                "fetch_format", "auto" // Formato automático (WebP quando possível)
+                                "quality", "auto" // Otimização automática
                         )));
 
         // Retorna a URL segura (HTTPS)

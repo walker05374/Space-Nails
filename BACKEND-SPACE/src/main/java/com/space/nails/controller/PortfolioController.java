@@ -41,42 +41,47 @@ public class PortfolioController {
             @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
             @RequestParam(value = "imagemUrl", required = false) String imagemUrlExterno) {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Usuario profissional = usuarioRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            Usuario profissional = usuarioRepository.findByEmail(auth.getName())
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        String finalUrl = "";
-        String cloudinaryPublicId = null;
+            String finalUrl = "";
+            String cloudinaryPublicId = null;
 
-        if (file != null && !file.isEmpty()) {
-            try {
-                finalUrl = cloudinaryService.uploadImage(file);
-                cloudinaryPublicId = cloudinaryService.extractPublicId(finalUrl);
-            } catch (Exception e) {
-                throw new RuntimeException("Erro ao fazer upload da imagem: " + e.getMessage());
+            if (file != null && !file.isEmpty()) {
+                try {
+                    finalUrl = cloudinaryService.uploadImage(file);
+                    cloudinaryPublicId = cloudinaryService.extractPublicId(finalUrl);
+                } catch (Exception e) {
+                    throw new RuntimeException("Erro ao fazer upload da imagem: " + e.getMessage());
+                }
+            } else if (imagemUrlExterno != null && !imagemUrlExterno.isEmpty()) {
+                finalUrl = imagemUrlExterno;
+                // URLs externas não têm publicId do Cloudinary
+            } else {
+                throw new RuntimeException("É necessário enviar uma Imagem (Arquivo) ou URL.");
             }
-        } else if (imagemUrlExterno != null && !imagemUrlExterno.isEmpty()) {
-            finalUrl = imagemUrlExterno;
-            // URLs externas não têm publicId do Cloudinary
-        } else {
-            throw new RuntimeException("É necessário enviar uma Imagem (Arquivo) ou URL.");
+
+            Servico servico = null;
+            if (servicoId != null) {
+                servico = servicoRepository.findById(servicoId).orElse(null);
+            }
+
+            PortfolioItem item = new PortfolioItem();
+            item.setTitulo(titulo);
+            item.setImagemUrl(finalUrl);
+            item.setCloudinaryPublicId(cloudinaryPublicId);
+            item.setProfissional(profissional);
+            item.setServico(servico);
+            item.setClicks(0);
+            item.setDataCriacao(LocalDateTime.now());
+
+            return ResponseEntity.ok(portfolioRepository.save(item));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
         }
-
-        Servico servico = null;
-        if (servicoId != null) {
-            servico = servicoRepository.findById(servicoId).orElse(null);
-        }
-
-        PortfolioItem item = new PortfolioItem();
-        item.setTitulo(titulo);
-        item.setImagemUrl(finalUrl);
-        item.setCloudinaryPublicId(cloudinaryPublicId);
-        item.setProfissional(profissional);
-        item.setServico(servico);
-        item.setClicks(0);
-        item.setDataCriacao(LocalDateTime.now());
-
-        return ResponseEntity.ok(portfolioRepository.save(item));
     }
 
     // Listar Meus Itens
