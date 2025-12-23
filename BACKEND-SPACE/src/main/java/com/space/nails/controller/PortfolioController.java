@@ -35,7 +35,7 @@ public class PortfolioController {
 
     // Upload/Criar Item
     @PostMapping(value = "/portfolio", consumes = { "multipart/form-data" })
-    public ResponseEntity<PortfolioItem> criar(
+    public ResponseEntity<?> criar(
             @RequestParam("titulo") String titulo,
             @RequestParam(value = "servicoId", required = false) Long servicoId,
             @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
@@ -80,7 +80,10 @@ public class PortfolioController {
             return ResponseEntity.ok(portfolioRepository.save(item));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).build();
+            java.util.Map<String, String> error = new java.util.HashMap<>();
+            error.put("message", e.getMessage());
+            error.put("details", e.toString());
+            return ResponseEntity.status(500).body(error);
         }
     }
 

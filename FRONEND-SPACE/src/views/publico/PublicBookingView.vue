@@ -21,7 +21,7 @@
 
          <!-- BOTÃO PORTFÓLIO -->
          <div class="text-center mb-6 mt-4">
-            <button @click="$router.push(`/portfolio/public/${route.params.slug}`)" class="text-xs font-bold text-[#DB2777] underline decoration-pink-300 decoration-2 underline-offset-4 hover:text-pink-700 transition-colors">
+            <button @click="$router.push(`/portfolio/public/${route.params.slug}`)" class="text-sm font-bold text-[#DB2777] bg-pink-50 hover:bg-pink-100 hover:text-pink-700 px-6 py-3 rounded-full transition-all transform hover:scale-105 shadow-sm hover:shadow-md">
                 ✨ Conheça um pouco do meu trabalho
             </button>
          </div>
@@ -312,10 +312,8 @@ async function abrirGaleria(servico) {
     fotosGaleria.value = []
     
     try {
-        const res = await fetch(`${API_URL}/portfolio/servico/${servico.id}`)
-        if(res.ok) {
-            fotosGaleria.value = await res.json()
-        }
+        const res = await api.get(`/api/public/portfolio/servico/${servico.id}`)
+        fotosGaleria.value = res.data
     } catch(e) {
         console.error("Erro ao carregar fotos", e)
     } finally {
@@ -326,7 +324,7 @@ async function abrirGaleria(servico) {
 async function registrarVisualizacao(foto) {
     // Apenas contabiliza click, pode abrir um lightbox se quiser (por enquanto só track)
     try {
-        await fetch(`${API_URL}/portfolio/${foto.id}/click`, { method: 'POST' })
+        await api.post(`/api/public/portfolio/${foto.id}/click`)
     } catch(e) {}
 }
 
@@ -375,14 +373,14 @@ onMounted(async () => {
     // Nosso api.js aponta para .../api.
     // Então os calls devem ser /public/...
     
-    const profRes = await api.get(`/public/profissional/slug/${slug}`)
+    const profRes = await api.get(`/api/public/profissional/slug/${slug}`)
     
     // Axios lança erro se status != 2xx
     
     const profissional = profRes.data
     // Agora busca detalhes completos (telefone, endereco)
     try {
-        const infoRes = await api.get(`/public/profissional/${profissional.id}/info`)
+        const infoRes = await api.get(`/api/public/profissional/${profissional.id}/info`)
         const info = infoRes.data
         nomeProfissional.value = info.nome
         telefoneProfissional.value = info.telefone
@@ -396,7 +394,7 @@ onMounted(async () => {
     profissionalIdConfirmado.value = profissional.id 
 
     // 3. Carrega serviços usando o ID real
-    const res = await api.get(`/public/servicos?profissionalId=${profissional.id}`)
+    const res = await api.get(`/api/public/servicos?profissionalId=${profissional.id}`)
     servicos.value = res.data
   } catch (e) {
     erro.value = e.message || "Erro ao carregar dados do profissional."
@@ -418,7 +416,7 @@ const carregarSlots = async () => {
   horaSelecionada.value = null // Updated to horaSelecionada
   
   try {
-    const res = await api.get(`/public/slots?servicoId=${servicoSelecionado.value.id}&data=${dataSelecionada.value}&profissionalId=${profissionalIdConfirmado.value}`)
+    const res = await api.get(`/api/public/slots?servicoId=${servicoSelecionado.value.id}&data=${dataSelecionada.value}&profissionalId=${profissionalIdConfirmado.value}`)
     slots.value = res.data
   } catch (e) {
     erro.value = "Erro ao buscar horários."
@@ -436,7 +434,7 @@ const iniciarNovoAgendamento = () => {
 const buscarAgendamento = async () => {
     erro.value = null
     try {
-        const res = await api.get(`/public/agendamento/${codigoBusca.value}`)
+        const res = await api.get(`/api/public/agendamento/${codigoBusca.value}`)
         agendamentoEncontrado.value = res.data
         step.value = 11 // Tela de visualização
     } catch (e) {
@@ -476,7 +474,7 @@ const confirmarAgendamento = async () => {
     if (modoRemarcacao.value) {
         // Lógica de Remarcação (PUT)
         // Backend usa POST para /remarcar
-        const res = await api.post(`/public/agendamento/${agendamentoEncontrado.value.codigo}/remarcar`, {
+        const res = await api.post(`/api/public/agendamento/${agendamentoEncontrado.value.codigo}/remarcar`, {
              novaDataHora: dataHoraIso 
         })
         
@@ -493,7 +491,7 @@ const confirmarAgendamento = async () => {
           telefoneCliente: cliente.value.telefone
         }
 
-        const res = await api.post(`/public/agendar`, payload)
+        const res = await api.post(`/api/public/agendar`, payload)
 
         // Se a resposta retornar o objeto criado, poderiamos pegar o codigo aqui
         // Mas o backend retorna o Agendamento, então podemos pegar.

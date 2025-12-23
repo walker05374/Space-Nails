@@ -1,15 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-
-const route = useRoute();
-const fotos = ref([]);
-const carregando = ref(true);
-const erro = ref(null);
-const profissional = ref(null);
-
-// Modal de Visualização Fullscreen
-const fotoSelecionada = ref(null);
 import api from '@/services/api';
 
 const route = useRoute();
@@ -33,13 +24,13 @@ onMounted(async () => {
         // O Public Booking usa /api/public/profissional/slug/{slug}.
         
         // Usa api service que já tem baseURL configurada
-        const resProf = await api.get(`/public/profissional/slug/${inviteCode}`);
+        const resProf = await api.get(`/api/public/profissional/slug/${inviteCode}`);
         
         // Axios já joga erro se status não for 2xx, então não precisa de if(!res.ok)
         profissional.value = resProf.data;
 
         // 2. Busca Fotos do Profissional
-        const resFotos = await api.get(`/public/portfolio/${profissional.value.id}`);
+        const resFotos = await api.get(`/api/public/portfolio/${profissional.value.id}`);
         fotos.value = resFotos.data;
 
     } catch(e) {
@@ -54,7 +45,7 @@ async function abrirFoto(foto) {
     fotoSelecionada.value = foto;
     // Registra visualização
     try {
-        await api.post(`/public/portfolio/${foto.id}/click`);
+        await api.post(`/api/public/portfolio/${foto.id}/click`);
     } catch(e) { console.error(e); }
 }
 

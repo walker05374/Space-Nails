@@ -35,10 +35,7 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
                 ObjectUtils.asMap(
                         "folder", "space-nails/portfolio", // Organiza em pasta
-                        "resource_type", "image",
-                        "transformation", ObjectUtils.asMap(
-                                "quality", "auto" // Otimização automática
-                        )));
+                        "resource_type", "image"));
 
         // Retorna a URL segura (HTTPS)
         return (String) uploadResult.get("secure_url");

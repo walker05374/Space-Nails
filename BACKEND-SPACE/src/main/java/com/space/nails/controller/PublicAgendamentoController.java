@@ -41,16 +41,21 @@ public class PublicAgendamentoController {
 
     @GetMapping("/profissional/slug/{slug}")
     public ResponseEntity<Usuario> getProfissionalBySlug(@PathVariable String slug) {
-        // 1. Tenta buscar pelo CÓDIGO DE CONVITE (Exato)
-        java.util.Optional<Usuario> pPorCodigo = usuarioRepository.findByCodigoConvite(slug.toUpperCase());
-        if (pPorCodigo.isPresent()) {
-            return ResponseEntity.ok(pPorCodigo.get());
+        try {
+            // 1. Tenta buscar pelo CÓDIGO DE CONVITE (Exato)
+            java.util.Optional<Usuario> pPorCodigo = usuarioRepository.findByCodigoConvite(slug.toUpperCase());
+            if (pPorCodigo.isPresent()) {
+                return ResponseEntity.ok(pPorCodigo.get());
+            }
+
+            // REMOVIDO: Busca por nome (Legacy)
+            // Para garantir sigilo, não permitimos mais buscar por nome/slug previsível.
+
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
-
-        // REMOVIDO: Busca por nome (Legacy)
-        // Para garantir sigilo, não permitimos mais buscar por nome/slug previsível.
-
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/profissional/{id}")
