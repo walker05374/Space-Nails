@@ -340,7 +340,8 @@ const cliente = ref({
   telefone: ''
 })
 
-const API_URL = 'http://localhost:8080/api/public'
+// REMOVIDO: const API_URL = 'http://localhost:8080/api/public'
+import api from '@/services/api' // Importa axios configurado
 
 import { useRoute } from 'vue-router'
 const route = useRoute()
@@ -368,27 +369,35 @@ onMounted(async () => {
     }
 
     // 2. Resolve o Slug para pegar o ID real
-    const profRes = await fetch(`${API_URL}/profissional/slug/${slug}`)
-    if (!profRes.ok) throw new Error("Link não encontrado ou inválido. Use o Código de Convite.")
+    // NOTA: api.js base URL é /api, então aqui chamamos /public/profissional... ?
+    // Não, api.js baseURL é .../api. Então precisamos acertar os paths.
+    // O antigo API_URL era .../api/public.
+    // Nosso api.js aponta para .../api.
+    // Então os calls devem ser /public/...
     
-    const profissional = await profRes.json()
+    const profRes = await api.get(`/public/profissional/slug/${slug}`)
+    
+    // Axios lança erro se status != 2xx
+    
+    const profissional = profRes.data
     // Agora busca detalhes completos (telefone, endereco)
-    const infoRes = await fetch(`${API_URL}/profissional/${profissional.id}/info`)
-    if(infoRes.ok) {
-        const info = await infoRes.json()
+    try {
+        const infoRes = await api.get(`/public/profissional/${profissional.id}/info`)
+        const info = infoRes.data
         nomeProfissional.value = info.nome
         telefoneProfissional.value = info.telefone
         enderecoProfissional.value = info.endereco
         localizacaoUrl.value = info.localizacaoUrl
-    } else {
+    } catch (infoErr) {
+        // Se falhar info, usa apenas nome basico
         nomeProfissional.value = profissional.nome
     }
     
     profissionalIdConfirmado.value = profissional.id 
 
     // 3. Carrega serviços usando o ID real
-    const res = await fetch(`${API_URL}/servicos?profissionalId=${profissional.id}`)
-    servicos.value = await res.json()
+    const res = await api.get(`/public/servicos?profissionalId=${profissional.id}`)
+    servicos.value = res.data
   } catch (e) {
     erro.value = e.message || "Erro ao carregar dados do profissional."
   } finally {
@@ -409,8 +418,8 @@ const carregarSlots = async () => {
   horaSelecionada.value = null // Updated to horaSelecionada
   
   try {
-    const res = await fetch(`${API_URL}/slots?servicoId=${servicoSelecionado.value.id}&data=${dataSelecionada.value}&profissionalId=${profissionalIdConfirmado.value}`)
-    slots.value = await res.json()
+    const res = await api.get(`/public/slots?servicoId=${servicoSelecionado.value.id}&data=${dataSelecionada.value}&profissionalId=${profissionalIdConfirmado.value}`)
+    slots.value = res.data
   } catch (e) {
     erro.value = "Erro ao buscar horários."
   } finally {
@@ -427,9 +436,8 @@ const iniciarNovoAgendamento = () => {
 const buscarAgendamento = async () => {
     erro.value = null
     try {
-        const res = await fetch(`${API_URL}/agendamento/${codigoBusca.value}`)
-        if (!res.ok) throw new Error("Agendamento não encontrado.")
-        agendamentoEncontrado.value = await res.json()
+        const res = await api.get(`/public/agendamento/${codigoBusca.value}`)
+        agendamentoEncontrado.value = res.data
         step.value = 11 // Tela de visualização
     } catch (e) {
         erro.value = "Código inválido ou agendamento não encontrado."
@@ -467,12 +475,10 @@ const confirmarAgendamento = async () => {
 
     if (modoRemarcacao.value) {
         // Lógica de Remarcação (PUT)
-        const res = await fetch(`${API_URL}/agendamento/${agendamentoEncontrado.value.codigo}/remarcar`, {
-            method: 'POST', // Backend usa POST para /remarcar
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ novaDataHora: dataHoraIso })
+        // Backend usa POST para /remarcar
+        const res = await api.post(`/public/agendamento/${agendamentoEncontrado.value.codigo}/remarcar`, {
+             novaDataHora: dataHoraIso 
         })
-        if (!res.ok) throw new Error('Erro ao remarcar.')
         
         // Atualiza dados locais para o recibo
         // Mantemos o cliente original
@@ -487,20 +493,11 @@ const confirmarAgendamento = async () => {
           telefoneCliente: cliente.value.telefone
         }
 
-        const res = await fetch(`${API_URL}/agendar`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
+        const res = await api.post(`/public/agendar`, payload)
 
-        if (!res.ok) {
-           const errJson = await res.json().catch(() => ({}))
-           throw new Error(errJson.message || 'Erro ao agendar')
-        }
-        
         // Se a resposta retornar o objeto criado, poderiamos pegar o codigo aqui
         // Mas o backend retorna o Agendamento, então podemos pegar.
-        const agendamentoCriado = await res.json()
+        const agendamentoCriado = res.data
         // Usamos agendamentoEncontrado como ref para exibir o código no recibo, mesmo sendo novo
         agendamentoEncontrado.value = agendamentoCriado
         
@@ -513,7 +510,7 @@ const confirmarAgendamento = async () => {
 
     step.value = 4
   } catch (e) {
-    erro.value = e.message
+    erro.value = e.response?.data?.message || e.message || 'Erro ao agendar'
   }
 }
 

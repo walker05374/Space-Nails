@@ -10,7 +10,16 @@ const profissional = ref(null);
 
 // Modal de Visualização Fullscreen
 const fotoSelecionada = ref(null);
-const API_URL = 'http://localhost:8080/api';
+import api from '@/services/api';
+
+const route = useRoute();
+const fotos = ref([]);
+const carregando = ref(true);
+const erro = ref(null);
+const profissional = ref(null);
+
+// Modal de Visualização Fullscreen
+const fotoSelecionada = ref(null);
 
 onMounted(async () => {
     try {
@@ -23,17 +32,15 @@ onMounted(async () => {
         // Se o inviteCode for slug (nome), funciona. Se for codigo, precisamos garantir.
         // O Public Booking usa /api/public/profissional/slug/{slug}.
         
-        let urlProfissional = `${API_URL}/public/profissional/slug/${inviteCode}`;
+        // Usa api service que já tem baseURL configurada
+        const resProf = await api.get(`/public/profissional/slug/${inviteCode}`);
         
-        const resProf = await fetch(urlProfissional);
-        if(!resProf.ok) throw new Error("Profissional não encontrado.");
-        profissional.value = await resProf.json();
+        // Axios já joga erro se status não for 2xx, então não precisa de if(!res.ok)
+        profissional.value = resProf.data;
 
         // 2. Busca Fotos do Profissional
-        const resFotos = await fetch(`${API_URL}/public/portfolio/${profissional.value.id}`);
-        if(resFotos.ok) {
-            fotos.value = await resFotos.json();
-        }
+        const resFotos = await api.get(`/public/portfolio/${profissional.value.id}`);
+        fotos.value = resFotos.data;
 
     } catch(e) {
         erro.value = "Não foi possível carregar o portfólio.";
@@ -47,7 +54,7 @@ async function abrirFoto(foto) {
     fotoSelecionada.value = foto;
     // Registra visualização
     try {
-        await fetch(`${API_URL}/public/portfolio/${foto.id}/click`, { method: 'POST' });
+        await api.post(`/public/portfolio/${foto.id}/click`);
     } catch(e) { console.error(e); }
 }
 
