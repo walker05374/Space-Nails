@@ -40,8 +40,8 @@ async function redefinir() {
     
     <div class="bg-white p-10 rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 w-full max-w-md text-center">
       
-      <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm">
-        ✨
+      <div class="mb-6">
+        <img src="/icon.png" alt="Icon" class="w-28 h-25 mx-auto animate-bounce-slow" />
       </div>
 
       <h1 class="text-2xl font-bold text-[#0F172A] mb-6">Nova Senha</h1>

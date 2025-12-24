@@ -20,6 +20,11 @@ const novoUsuario = ref({
   role: 'USER'
 });
 
+// Campos de Backup (Correção)
+const alertaBackup = ref(false);
+const ultimoBackup = ref(null);
+const diasDesdeBackup = ref(0);
+
 const stats = computed(() => {
   return {
     total: usuarios.value.length,
@@ -236,13 +241,14 @@ async function fazerBackup() {
 }
 
 // LÓGICA DE RESTORE
-const arquivoRestore = ref(null);
+// LÓGICA DE RESTORE
+const backupInput = ref(null);
 
 function triggerRestore() {
-    if(arquivoRestore.value) arquivoRestore.value.click();
+    if(backupInput.value) backupInput.value.click();
 }
 
-async function onRestoreFileChange(e) {
+async function processarRestore(e) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -256,10 +262,13 @@ async function onRestoreFileChange(e) {
 
     try {
         carregando.value = true;
-        await api.post('/api/admin/restore', formData, {
+        const response = await api.post('/api/admin/restore', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert("Restauração concluída com sucesso! A página será recarregada.");
+        
+        // Show detailed report from server
+        alert(response.data); 
+        
         window.location.reload();
     } catch (err) {
         console.error(err);
@@ -274,6 +283,7 @@ async function onRestoreFileChange(e) {
     
     <header class="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 md:px-6 py-4 flex justify-between items-center shadow-sm">
       <div class="flex items-center gap-2">
+        <img src="/icon.png" alt="Icon" class="w-8 h-8 animate-bounce-slow" />
         <h1 class="text-lg md:text-xl font-bold text-[#0F172A]">Painel <span class="text-[#DB2777]">Admin</span></h1>
       </div>
 
@@ -445,7 +455,7 @@ async function onRestoreFileChange(e) {
               </div>
 
               <div class="flex gap-4">
-                  <input type="file" ref="backupInput" class="hidden" accept=".json" @change="processarRestore">
+                  <input type="file" ref="backupInput" class="hidden" accept=".sql" @change="processarRestore">
                   
                   <button @click="triggerRestore" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-colors text-gray-300 border border-slate-600 hover:border-slate-500">
                      📥 Restaurar Dados

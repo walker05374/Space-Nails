@@ -101,6 +101,9 @@ function handleAvatarSelect(url) {
     </button>
 
     <div class="text-center mb-10 z-10">
+      <div class="mb-4">
+        <img src="/icon.png" alt="Icon" class="w-28 h-25 mx-auto animate-bounce-slow" />
+      </div>
       <h1 class="text-2xl md:text-3xl font-bold text-brand-dark">Quem está acessando?</h1>
       <div class="mt-2 flex items-center justify-center gap-2">
          <span class="text-sm text-gray-500">Gerenciar Perfis</span>

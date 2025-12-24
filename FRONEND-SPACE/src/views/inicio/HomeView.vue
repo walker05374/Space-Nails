@@ -853,7 +853,7 @@ async function salvarAgendaBackend() {
     
     <header class="bg-white sticky top-0 z-30 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <img src="/icon.png" alt="Icon" class="w-10 h-10 rounded-full shadow-sm border border-pink-100" />
+        <img src="/icon.png" alt="Icon" class="w-10 h-10 animate-bounce-slow" />
         <div>
           <h1 class="text-lg md:text-xl font-bold text-[#0F172A] leading-tight">Space<span class="text-[#DB2777]">.Nails</span></h1>
           <p class="text-[10px] md:text-xs font-medium text-gray-400 capitalize">{{ hojeStr }}</p>

@@ -92,7 +92,7 @@ async function fazerLogin() {
       <div class="text-center mb-10">
         <img src="/icon.png" alt="Icon" class="w-28 h-25 mx-auto animate-bounce-slow" />
         <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">Space<span class="text-[#DB2777]">.Nails</span></h1>
-        <p class="text-gray-400 text-sm mt-2 font-medium">Bem-vinda de volta</p>
+        <p class="text-gray-400 text-sm mt-2 font-medium">Bem-vindo(a) de volta</p>
       </div>
 
       <form @submit.prevent="fazerLogin" class="space-y-6">

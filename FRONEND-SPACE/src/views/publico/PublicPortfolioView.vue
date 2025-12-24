@@ -69,7 +69,7 @@ function fecharFoto() {
                     <button @click="$router.push(`/agendar/${route.params.inviteCode}`)" class="p-2 -ml-2 text-gray-400 hover:text-[#DB2777] rounded-full hover:bg-pink-50 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                     </button>
-                    <img src="/icon.png" class="w-10 h-10 rounded-full shadow-sm" />
+                    <img src="/icon.png" class="w-10 h-10 animate-bounce-slow" />
                     <div>
                         <h1 class="font-bold text-[#0F172A] text-lg leading-tight">Portfólio</h1>
                         <p v-if="profissional" class="text-xs text-gray-500">de {{ profissional.nome }}</p>

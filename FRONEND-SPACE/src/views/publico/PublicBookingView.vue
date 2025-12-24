@@ -5,7 +5,7 @@
 
     <div class="booking-card">
       <div class="header-section">
-        <img src="/icon.png" alt="Logo" class="w-16 h-16 mx-auto mb-2 animate-bounce-slow" />
+        <img src="/icon.png" alt="Logo" class="w-28 h-25 mx-auto mb-2 animate-bounce-slow" />
         <h2 class="title-brand">Space<span class="text-pink">.Nails</span></h2>
         <p class="subtitle" v-if="nomeProfissional">Agendamento com <strong>{{ nomeProfissional }}</strong></p>
         
