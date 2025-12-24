@@ -19,15 +19,20 @@ public class Servico {
     @Column(name = "tempo_estimado_minutos")
     private Integer tempoEstimado;
 
+    @Column(columnDefinition = "boolean default true")
+    private Boolean ativo = true;
+
     // --- CORREÇÃO IMPORTANTE ---
     // Estava "private Cliente profissional;" -> ISSO CAUSA O ERRO
-    // Deve ser "private Usuario profissional;" -> POIS QUEM PRESTA O SERVIÇO É O USUÁRIO
+    // Deve ser "private Usuario profissional;" -> POIS QUEM PRESTA O SERVIÇO É O
+    // USUÁRIO
     @ManyToOne
     @JoinColumn(name = "profissional_id")
-    private Usuario profissional; 
+    private Usuario profissional;
 
     // CONSTRUTORES
-    public Servico() {}
+    public Servico() {
+    }
 
     public Servico(Long id, String nome, Double valor, Integer tempoEstimado, Usuario profissional) {
         this.id = id;
@@ -38,19 +43,52 @@ public class Servico {
     }
 
     // GETTERS E SETTERS
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
-    public String getNome() { return nome; }
-    public void setNome(String nome) { this.nome = nome; }
-    
-    public Double getValor() { return valor; }
-    public void setValor(Double valor) { this.valor = valor; }
-    
-    public Integer getTempoEstimado() { return tempoEstimado; }
-    public void setTempoEstimado(Integer tempoEstimado) { this.tempoEstimado = tempoEstimado; }
-    
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public Double getValor() {
+        return valor;
+    }
+
+    public void setValor(Double valor) {
+        this.valor = valor;
+    }
+
+    public Integer getTempoEstimado() {
+        return tempoEstimado;
+    }
+
+    public void setTempoEstimado(Integer tempoEstimado) {
+        this.tempoEstimado = tempoEstimado;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
     // ATUALIZE O GETTER/SETTER TAMBÉM
-    public Usuario getProfissional() { return profissional; }
-    public void setProfissional(Usuario profissional) { this.profissional = profissional; }
+    public Usuario getProfissional() {
+        return profissional;
+    }
+
+    public void setProfissional(Usuario profissional) {
+        this.profissional = profissional;
+    }
 }

@@ -97,6 +97,40 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioRepository.findByProfissionalOrderByDataCriacaoDesc(profissional));
     }
 
+    // Editar Item
+    @PutMapping("/portfolio/{id}")
+    public ResponseEntity<PortfolioItem> editar(@PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> payload) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario profissional = usuarioRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        PortfolioItem item = portfolioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item não encontrado"));
+
+        // Segurança: Só dono edita
+        if (!item.getProfissional().getId().equals(profissional.getId())) {
+            throw new RuntimeException("Acesso negado");
+        }
+
+        if (payload.containsKey("titulo")) {
+            item.setTitulo((String) payload.get("titulo"));
+        }
+
+        if (payload.containsKey("servicoId")) {
+            Object sId = payload.get("servicoId");
+            if (sId != null) {
+                Long servicoId = Long.valueOf(sId.toString());
+                Servico servico = servicoRepository.findById(servicoId).orElse(null);
+                item.setServico(servico);
+            } else {
+                item.setServico(null);
+            }
+        }
+
+        return ResponseEntity.ok(portfolioRepository.save(item));
+    }
+
     @DeleteMapping("/portfolio/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

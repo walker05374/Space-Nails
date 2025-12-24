@@ -40,6 +40,7 @@ const notificacoes = ref([]);
 const mostrarNotificacoes = ref(false);
 const qtdNaoLidas = computed(() => notificacoes.value.length);
 let pollingNotificacoes = null;
+let pollingDados = null;
 
 const termoBuscaCliente = ref('');
 const ordemCliente = ref('az'); 
@@ -53,14 +54,25 @@ const novoAgendamento = ref({
   servicoSelecionado: '',
   nomeServicoCustom: '',
   valorCustom: '',
-  data: new Date().toISOString().split('T')[0],
-  hora: '',
   observacoes: ''
 });
+
+// --- TOAST NOTIFICATION ---
+const toast = ref({ show: false, message: '', tipo: 'sucesso' });
+function showToast(msg, tipo = 'sucesso') {
+    toast.value = { show: true, message: msg, tipo };
+    setTimeout(() => { toast.value.show = false; }, 3000);
+}
 
 // Novo modal de Sucesso/WhatsApp
 const modalSuccessOpen = ref(false);
 const agendamentoCriado = ref(null);
+
+// Modal Cancelamento
+const modalCancelamentoOpen = ref(false);
+const agendamentoParaCancelar = ref(null);
+const motivoCancelamento = ref('Imprevisto');
+const opcoesCancelamento = ['Imprevisto', 'Doença', 'Emergência', 'Cliente Desistiu', 'Outro'];
 
 function abrirWhatsappComprovante() {
     if (!agendamentoCriado.value) return;
@@ -80,7 +92,7 @@ function abrirWhatsappComprovante() {
 }
 
 const novoCliente = ref({ nome: '', telefone: '', endereco: '' });
-const novoServico = ref({ nome: '', valor: '' });
+const novoServico = ref({ nome: '', valor: '', tempoEstimado: 60 });
 
 // --- SLOTS ---
 const slotsDisponiveis = ref([]);
@@ -91,29 +103,30 @@ watch(() => [novoAgendamento.value.data, novoAgendamento.value.servicoSelecionad
 });
 
 async function buscarSlots() {
-    // Só busca se tiver data e serviço (e não for custom)
-    if (!novoAgendamento.value.data || !novoAgendamento.value.servicoSelecionado || novoAgendamento.value.servicoSelecionado === 'custom') {
-        slotsDisponiveis.value = [];
-        return;
-    }
+    if (!novoAgendamento.value.data || !novoAgendamento.value.servicoSelecionado) return;
     
     carregandoSlots.value = true;
     try {
-        const res = await api.get('/api/public/slots', {
-            params: {
-                data: novoAgendamento.value.data,
-                servicoId: novoAgendamento.value.servicoSelecionado,
-                profissionalId: auth.user.id
-            }
+        const res = await api.get(`/api/agendamentos/disponibilidade`, {
+           params: { 
+               data: novoAgendamento.value.data,
+               servicoId: novoAgendamento.value.servicoSelecionado 
+           }
         });
-        slotsDisponiveis.value = res.data;
-    } catch (e) {
-        console.error("Erro ao buscar slots", e);
+        slotsDisponiveis.value = res.data; 
+    } catch(e) {
+        console.error(e);
         slotsDisponiveis.value = [];
     } finally {
         carregandoSlots.value = false;
     }
 }
+
+// Scroll to Top ao trocar de Aba Principal
+watch(abaPrincipal, () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 
 // --- FUNÇÃO DE DATA SEGURA ---
 function criarDataLocal(dataString) {
@@ -143,10 +156,42 @@ const alertaVencimento = computed(() => {
       return { nivel: 'atencao', texto: `Vence em ${diffDays} dias`, dias: diffDays };
   }
   return null;
+  if (diffDays <= 5) {
+      if (diffDays < 0) return { nivel: 'erro', texto: 'Vencida!', dias: diffDays };
+      if (diffDays === 0) return { nivel: 'atencao', texto: 'Vence HOJE!', dias: 0 };
+      return { nivel: 'atencao', texto: `Vence em ${diffDays} dias`, dias: diffDays };
+  }
+  return null;
 });
 
-// Variaveis globais de intervalo
-let pollingDados = null; // New interval variable
+// --- NOVO: LÓGICA DE TEMPO REAL ---
+function isHorarioFuturo(dataString) {
+   if (!dataString) return false;
+   const dataAgendamento = new Date(dataString);
+   const agora = new Date();
+   return dataAgendamento > agora;
+}
+
+// --- NOVO: CLICK NOTIFICAÇÃO ---
+async function handleNotificacaoClick(notif) {
+    // Marca como lida
+    await marcarComoLida(notif.id);
+    
+    // Fecha dropdown
+    mostrarNotificacoes.value = false;
+    
+    // Tenta extrair ID do agendamento (se houver padrão na mensagem ou payload extra)
+    // Como simplificação, apenas vai para a aba de agendamentos e rola a tela
+    if (abaPrincipal.value !== 'agendamentos') {
+        abaPrincipal.value = 'agendamentos';
+    }
+    
+    // Pequeno delay para a aba renderizar
+    setTimeout(() => {
+         const el = document.getElementById('agendamentos-section');
+         if(el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 200);
+}
 
 // ... (existing code)
 
@@ -379,6 +424,22 @@ function abrirWhatsappRenovacao() {
     window.open(url, '_blank');
 }
 
+// --- NAVEGAÇÃO CENTRALIZADA ---
+function navegarPara(aba) {
+    abaPrincipal.value = aba;
+    // Reseta estados de menu/scroll
+    userMenuOpen.value = false;
+    mostrarNotificacoes.value = false;
+    
+    // Scroll forçado para o topo
+    window.scrollTo({ top: 0, behavior: 'auto' });
+
+    // Se for agendamentos, reseta filtro
+    if (aba === 'agendamentos') {
+        abaAgenda.value = 'todos';
+    }
+}
+
 // --- LINK DE AGENDAMENTO ---
 const meuLinkAgendamento = computed(() => {
     if (!auth.user) return '';
@@ -395,9 +456,9 @@ const meuLinkAgendamento = computed(() => {
 async function copiarMeulink() {
     try {
         await navigator.clipboard.writeText(meuLinkAgendamento.value);
-        alert(`Link copiado com sucesso! \n${meuLinkAgendamento.value}`);
+        showToast("Link copiado com sucesso!");
     } catch(err) {
-        alert("Erro ao copiar link.");
+        showToast("Erro ao copiar link.", 'erro');
     }
 }
 
@@ -525,9 +586,10 @@ function gerarRelatorioPDF() {
     });
 
     doc.save(`relatorio_space_nails_${dataInicioGrafico.value}.pdf`);
+    showToast("PDF Gerado com sucesso!");
   } catch(e) {
     console.error("Erro PDF:", e);
-    alert("Erro ao gerar PDF. Verifique o console.");
+    showToast("Erro ao gerar PDF.", 'erro');
   }
 }
 
@@ -559,10 +621,10 @@ async function salvarCliente() {
         
         if (clienteEmEdicaoId.value) {
             await api.put(`/api/clientes/${clienteEmEdicaoId.value}`, payload);
-            alert("Cliente atualizada!");
+            showToast("Cliente atualizada!");
         } else {
             await api.post('/api/clientes', payload);
-            alert("Cliente cadastrada!");
+            showToast("Cliente cadastrada!");
         }
 
         modalClienteOpen.value = false;
@@ -570,8 +632,48 @@ async function salvarCliente() {
         novoCliente.value = { nome: '', telefone: '', endereco: '' };
         clienteEmEdicaoId.value = null;
     } catch(e) { 
-        alert("Erro ao salvar cliente."); 
+        showToast("Erro ao salvar cliente.", 'erro'); 
         console.error(e);
+    }
+}
+
+// --- CANCELAMENTO + WHATSAPP ---
+const motivoCancelamentoExtra = ref('');
+function abrirModalCancelamento(agenda) {
+    agendamentoParaCancelar.value = agenda;
+    motivoCancelamento.value = 'Imprevisto';
+    motivoCancelamentoExtra.value = '';
+    modalCancelamentoOpen.value = true;
+}
+
+async function confirmarCancelamento() {
+    if(!agendamentoParaCancelar.value) return;
+
+    try {
+        await api.patch(`/api/agendamentos/${agendamentoParaCancelar.value.id}/status`, { status: 'CANCELADO' });
+        
+        // Atualiza UI
+        const item = agendamentos.value.find(a => a.id === agendamentoParaCancelar.value.id);
+        if (item) item.status = 'CANCELADO';
+        
+        // Monta mensagem WhatsApp
+        const cli = agendamentoParaCancelar.value;
+        const motivoFinal = motivoCancelamento.value === 'Outro' ? motivoCancelamentoExtra.value : motivoCancelamento.value;
+        
+        const dataF = new Date(cli.dataHora).toLocaleDateString('pt-BR');
+        const horaF = new Date(cli.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        const textoZap = `Olá ${cli.nomeCliente}, infelizmente precisei cancelar seu agendamento de ${cli.nomeServico} marcado para dia ${dataF} às ${horaF}. Motivo: ${motivoFinal}. Podemos remarcar?`;
+        
+        const link = `https://wa.me/55${cli.telefoneCliente ? cli.telefoneCliente.replace(/\D/g,'') : ''}?text=${encodeURIComponent(textoZap)}`;
+        window.open(link, '_blank');
+
+        modalCancelamentoOpen.value = false;
+        agendamentoParaCancelar.value = null;
+        carregarDados();
+
+    } catch (e) {
+        alert("Erro ao cancelar agendamento.");
     }
 }
 
@@ -580,13 +682,13 @@ async function excluirCliente(cliente) {
   
   try {
     await api.delete(`/api/clientes/${cliente.id}`);
-    alert("Cliente excluído com sucesso!"); 
+    showToast("Cliente excluído com sucesso!"); 
     carregarDados(); 
   } catch (e) {
     if (e.response && (e.response.status === 409 || e.response.status === 500)) {
-        alert("Erro: Não foi possível excluir o cliente. Verifique se existem agendamentos vinculados a ele e exclua-os primeiro.");
+        showToast("Erro: Cliente possui agendamentos.", 'erro');
     } else {
-        alert("Erro ao excluir cliente.");
+        showToast("Erro ao excluir cliente.", 'erro');
     }
   }
 }
@@ -609,7 +711,8 @@ async function adicionarServicoLista() {
   try {
       const payload = {
           nome: novoServico.value.nome,
-          valor: parseFloat(novoServico.value.valor)
+          valor: parseFloat(novoServico.value.valor),
+          tempoEstimado: parseInt(novoServico.value.tempoEstimado || 60)
       };
       
       if (servicoEmEdicaoId.value) {
@@ -617,11 +720,11 @@ async function adicionarServicoLista() {
           // Atualiza localmente
           const index = servicos.value.findIndex(s => s.id === servicoEmEdicaoId.value);
           if (index !== -1) servicos.value[index] = { ...servicos.value[index], ...payload };
-          alert("Serviço atualizado com sucesso!");
+          showToast("Serviço atualizado!");
       } else {
           const res = await api.post('/api/servicos', payload);
           servicos.value.push(res.data);
-          alert("Serviço adicionado com sucesso!");
+          showToast("Serviço adicionado!");
       }
       
       novoServico.value = { nome: '', valor: '' };
@@ -629,19 +732,19 @@ async function adicionarServicoLista() {
       modalServicoOpen.value = false;
   } catch (e) {
       console.error(e);
-      alert("Erro ao salvar serviço.");
+      showToast("Erro ao salvar serviço.", 'erro');
   }
 }
 
 function abrirModalEditarServico(servico) {
     servicoEmEdicaoId.value = servico.id;
-    novoServico.value = { nome: servico.nome, valor: servico.valor };
+    novoServico.value = { nome: servico.nome, valor: servico.valor, tempoEstimado: servico.tempoEstimado || 60 };
     modalServicoOpen.value = true;
 }
 
 function abrirModalNovoServico() {
     servicoEmEdicaoId.value = null;
-    novoServico.value = { nome: '', valor: '' };
+    novoServico.value = { nome: '', valor: '', tempoEstimado: 60 };
     modalServicoOpen.value = true;
 }
 
@@ -651,10 +754,10 @@ async function removerServico(index, id) {
     try {
         await api.delete(`/api/servicos/${id}`);
         servicos.value.splice(index, 1);
+        showToast("Serviço removido!");
     } catch (e) {
         console.error(e);
-        // Se for 403 ou algo assim (serviço global), avisa
-        alert("Não foi possível excluir este serviço. (Pode ser um serviço padrão do sistema)");
+        showToast("Não foi possível excluir. Talvez seja padrão.", 'erro');
     }
 }
 
@@ -737,10 +840,10 @@ async function salvarAgendaBackend() {
             localStorage.setItem('user_data', JSON.stringify(auth.user));
         }
 
-        alert("Configuração salva com sucesso!");
+        alert("Configuração salva com sucesso!"); // Mantem alert aqui pois fecha modal
         modalConfigAgendaOpen.value = false;
     } catch(e) {
-        alert("Erro ao salvar agenda.");
+        showToast("Erro ao salvar agenda.", 'erro');
     }
 }
 </script>
@@ -749,15 +852,18 @@ async function salvarAgendaBackend() {
   <div class="min-h-screen bg-[#F8FAFC] pb-24 md:pb-10 font-sans">
     
     <header class="bg-white sticky top-0 z-30 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center">
-      <div>
-        <h1 class="text-lg md:text-xl font-bold text-[#0F172A]">Space<span class="text-[#DB2777]">.Nails</span></h1>
-        <p class="text-[10px] md:text-xs font-medium text-gray-400 capitalize">{{ hojeStr }}</p>
+      <div class="flex items-center gap-3">
+        <img src="/icon.png" alt="Icon" class="w-10 h-10 rounded-full shadow-sm border border-pink-100" />
+        <div>
+          <h1 class="text-lg md:text-xl font-bold text-[#0F172A] leading-tight">Space<span class="text-[#DB2777]">.Nails</span></h1>
+          <p class="text-[10px] md:text-xs font-medium text-gray-400 capitalize">{{ hojeStr }}</p>
+        </div>
       </div>
       
       <div class="flex items-center gap-2 md:gap-3">
         
         <!-- Notificações (Sininho) -->
-        <div class="relative mr-2" @click.stop="mostrarNotificacoes = !mostrarNotificacoes">
+        <div class="relative mr-2" @click.stop="{ mostrarNotificacoes = !mostrarNotificacoes; if(mostrarNotificacoes) userMenuOpen = false; }">
             <div class="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 hover:text-[#DB2777] transition-colors"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                 
@@ -782,7 +888,7 @@ async function salvarAgendaBackend() {
                     </div>
                     <div v-else class="flex flex-col">
                         <div v-for="notif in notificacoes" :key="notif.id" 
-                             @click="marcarComoLida(notif.id)"
+                             @click="handleNotificacaoClick(notif)"
                              class="p-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 relative group">
                             
                             <p class="text-sm font-medium text-gray-700 leading-snug pr-4">{{ notif.mensagem }}</p>
@@ -812,7 +918,7 @@ async function salvarAgendaBackend() {
 
 
         <!-- User Dropdown (Substitui botões soltos) -->
-        <div class="relative ml-2" @click.stop="userMenuOpen = !userMenuOpen">
+        <div class="relative ml-2" @click.stop="{ userMenuOpen = !userMenuOpen; if(userMenuOpen) mostrarNotificacoes = false; }">
             <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 pr-2 rounded-xl transition-colors border border-transparent hover:border-gray-100">
                 <div class="w-8 h-8 rounded-full bg-[#DB2777] flex items-center justify-center text-white font-bold text-xs">
                     {{ auth.user?.nome?.charAt(0).toUpperCase() }}
@@ -836,22 +942,22 @@ async function salvarAgendaBackend() {
                  </div>
 
                  <!-- NOVO: Link para Portfolio na Sidebar/Menu -->
-                 <button @click.stop="abaPrincipal = 'portfolio'; userMenuOpen = false" :class="['w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2 transition-colors', abaPrincipal === 'portfolio' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-600 hover:bg-gray-50']">
-                    📸 Meu Portfólio
+                 <button @click.stop="navegarPara('portfolio')" :class="['w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2 transition-colors', abaPrincipal === 'portfolio' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-600 hover:bg-gray-50']">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> Meus Trabalhos
                  </button>
 
                  <button @click="abrirModalConfigAgenda" class="w-full text-left px-3 py-2 text-xs font-medium text-gray-600 hover:bg-pink-50 hover:text-[#DB2777] rounded-xl flex items-center gap-2 transition-colors">
-                    ⚙️ Configurar Agenda
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Configurar Agenda
                  </button>
                  
                  <button @click="abrirWhatsappRenovacao" class="w-full text-left px-3 py-2 text-xs font-medium text-gray-600 hover:bg-pink-50 hover:text-[#DB2777] rounded-xl flex items-center gap-2 transition-colors">
-                    💳 Renovar Assinatura
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg> Renovar Assinatura
                  </button>
 
                  <div class="h-px bg-gray-50 my-1"></div>
 
                  <button @click="auth.logout" class="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl flex items-center gap-2 transition-colors">
-                    🚪 Sair do Sistema
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Sair do Sistema
                  </button>
             </div>
         </div>
@@ -860,12 +966,12 @@ async function salvarAgendaBackend() {
 
      <!-- Menu Inferior Mobile -->
      <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-2 flex justify-around z-40 pb-6">
-       <button @click="abaPrincipal = 'dashboard'" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'dashboard' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
+       <button @click="navegarPara('dashboard')" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'dashboard' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
          <span class="text-[9px] font-bold">Início</span>
        </button>
        
-       <button @click="abaPrincipal = 'agendamentos'" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'agendamentos' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
+       <button @click="navegarPara('agendamentos')" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'agendamentos' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
          <span class="text-[9px] font-bold">Agenda</span>
        </button>
@@ -876,12 +982,12 @@ async function salvarAgendaBackend() {
          </div>
        </button>
        
-       <button @click="abaPrincipal = 'clientes'" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'clientes' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
+       <button @click="navegarPara('clientes')" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'clientes' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
          <span class="text-[9px] font-bold">Clientes</span>
        </button>
 
-       <button @click="abaPrincipal = 'servicos'" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'servicos' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
+       <button @click="navegarPara('servicos')" :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-colors', abaPrincipal === 'servicos' ? 'text-[#DB2777] bg-pink-50' : 'text-gray-400']">
          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg>
          <span class="text-[9px] font-bold">Serviços</span>
        </button>
@@ -889,19 +995,19 @@ async function salvarAgendaBackend() {
 
     <!-- SIDEBAR DESKTOP -->
     <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 fixed inset-y-0 left-0 pt-20 px-4 space-y-1 z-20">
-       <button @click="abaPrincipal = 'dashboard'" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'dashboard' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
+       <button @click="navegarPara('dashboard')" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'dashboard' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
          Dashboard
        </button>
-       <button @click="abaPrincipal = 'agendamentos'" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'agendamentos' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
+       <button @click="navegarPara('agendamentos')" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'agendamentos' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
          Agendamentos
        </button>
-       <button @click="abaPrincipal = 'clientes'" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'clientes' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
+       <button @click="navegarPara('clientes')" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'clientes' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
          Meus Clientes
        </button>
-       <button @click="abaPrincipal = 'servicos'" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'servicos' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
+       <button @click="navegarPara('servicos')" :class="['w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition-all', abaPrincipal === 'servicos' ? 'bg-pink-50 text-[#DB2777]' : 'text-gray-500 hover:bg-gray-50']">
          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg>
          Serviços
        </button>
@@ -940,7 +1046,7 @@ async function salvarAgendaBackend() {
              <p class="text-xs font-bold text-gray-400 uppercase tracking-wider relative z-10">Agendamentos</p>
              <div class="flex items-end justify-between mt-1 relative z-10">
                  <p class="text-xl md:text-2xl font-bold text-blue-600">{{ listaTotalDoDia.length }}</p>
-                 <button @click="{ abaPrincipal = 'agendamentos'; abaAgenda = 'todos'; }" class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors">Ver Todos</button>
+                 <button @click="navegarPara('agendamentos')" class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors">Ver Todos</button>
              </div>
           </div>
 
@@ -974,7 +1080,7 @@ async function salvarAgendaBackend() {
                 <button @click="setFiltroPeriodo('semana')" class="px-3 py-1 text-xs font-bold bg-pink-50 text-[#DB2777] rounded-lg hover:bg-pink-100">7 Dias</button>
                 <button @click="setFiltroPeriodo('mes')" class="px-3 py-1 text-xs font-bold bg-pink-50 text-[#DB2777] rounded-lg hover:bg-pink-100">30 Dias</button>
                 <button @click="gerarRelatorioPDF" class="px-3 py-1 text-xs font-bold bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center gap-1">
-                    📄 Baixar PDF
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Baixar PDF
                 </button>
             </div>
           <div class="h-64 flex items-end justify-between gap-3 border-b border-gray-100 pb-2 relative mt-4">
@@ -987,8 +1093,8 @@ async function salvarAgendaBackend() {
              </div>
 
              <div v-if="dadosGrafico.length === 0" class="w-full h-full flex flex-col items-center justify-center text-center">
-                 <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                    <span class="text-2xl grayscale">📊</span>
+                 <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
                  </div>
                  <p class="text-gray-400 font-bold text-sm">Sem dados neste período</p>
                  <p class="text-[10px] text-gray-300">Tente buscar por "30 Dias"</p>
@@ -1049,30 +1155,38 @@ async function salvarAgendaBackend() {
              <!-- Abas da Agenda -->
              <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
                  <button @click="abaAgenda = 'pendentes'" 
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5"
                     :class="abaAgenda === 'pendentes' ? 'bg-yellow-50 text-yellow-600 border border-yellow-200' : 'text-gray-400 hover:bg-gray-50'">
-                    ⏳ Dia ({{ listaPendentes.length }})
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Dia ({{ listaPendentes.length }})
                  </button>
                  <button @click="abaAgenda = 'todos'" 
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5"
                     :class="abaAgenda === 'todos' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'text-gray-400 hover:bg-gray-50'">
-                    📅 Geral ({{ listaTodosFuturos.length }})
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Geral ({{ listaTodosFuturos.length }})
                  </button>
                  <button @click="abaAgenda = 'concluidos'" 
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5"
                     :class="abaAgenda === 'concluidos' ? 'bg-green-50 text-green-600 border border-green-200' : 'text-gray-400 hover:bg-gray-50'">
-                    ✅ Concluídos ({{ listaConcluidos.length }})
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Concluídos ({{ listaConcluidos.length }})
                  </button>
                  <button @click="abaAgenda = 'cancelados'" 
-                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5"
                     :class="abaAgenda === 'cancelados' ? 'bg-red-50 text-red-600 border border-red-200' : 'text-gray-400 hover:bg-gray-50'">
-                    🚫 Cancelados ({{ listaCancelados.length }})
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Cancelados ({{ listaCancelados.length }})
                  </button>
              </div>
 
              <!-- Lista Unificada -->
              <div v-if="listaAtiva.length === 0" class="text-center py-12 text-gray-300 text-sm flex flex-col items-center">
-                 <span class="text-4xl mb-2 opacity-50">{{ abaAgenda === 'pendentes' ? '🤷‍♀️' : (abaAgenda === 'concluidos' ? '✨' : '🗑️') }}</span>
+                 <span class="text-4xl mb-2 opacity-50 py-2">
+                       <svg v-if="abaAgenda === 'pendentes'" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                       <svg v-else-if="abaAgenda === 'concluidos'" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                       <svg v-else xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                 </span>
                  Nenhum agendamento nesta lista.
              </div>
 
@@ -1105,19 +1219,22 @@ async function salvarAgendaBackend() {
                            target="_blank"
                            class="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 transition-colors flex items-center gap-1"
                            title="Enviar Lembrete WhatsApp">
-                           📱
+                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                         </a>
 
-                        <button v-if="agenda.status !== 'CONCLUIDO' && !isDataFutura(agenda.dataHora)" @click="atualizarStatus(agenda.id, 'CONCLUIDO')" class="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-1 rounded hover:bg-green-200 transition-colors" title="Concluir">✔</button>
-                        <button v-if="agenda.status !== 'CONCLUIDO'" @click="atualizarStatus(agenda.id, 'CANCELADO')" class="text-[10px] font-bold bg-red-50 text-red-500 px-2 py-1 rounded hover:bg-red-100 transition-colors" title="Cancelar">✕</button>
-                        <span v-if="agenda.status === 'CONCLUIDO'" class="text-[10px] font-bold text-green-600 uppercase bg-green-50 px-2 py-0.5 rounded">Feito</span>
-                     </div>
-                     <span v-else class="text-[10px] font-bold text-red-400 uppercase bg-red-50 px-2 py-0.5 rounded">Cancelado</span>
-                   </div>
-                 </div>
-             </div>
+                        <button v-if="agenda.status !== 'CONCLUIDO' && !isHorarioFuturo(agenda.dataHora)" @click="atualizarStatus(agenda.id, 'CONCLUIDO')" class="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-1 rounded hover:bg-green-200 transition-colors" title="Concluir">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </button>
+                        <button v-if="agenda.status !== 'CONCLUIDO'" @click="abrirModalCancelamento(agenda)" class="text-[10px] font-bold bg-red-50 text-red-500 px-2 py-1 rounded hover:bg-red-100 transition-colors" title="Cancelar">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
         </div>
       </div>
+
+                  </div>
+              </div>
+          </div>
+        </div>
 
       <div v-if="abaPrincipal === 'clientes'" class="space-y-4 animate-fade-in">
         <div class="flex gap-2">
@@ -1143,10 +1260,10 @@ async function salvarAgendaBackend() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592z"/></svg>
                  </a>
                  <button @click="abrirModalEditarCliente(cliente)" class="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 transition-colors" title="Editar">
-                    ✏️
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                  </button>
                  <button @click="excluirCliente(cliente)" class="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors" title="Excluir">
-                    🗑️
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                  </button>
              </div>
           </div>
@@ -1254,7 +1371,16 @@ async function salvarAgendaBackend() {
         <h3 class="font-bold text-[#0F172A] mb-4">{{ servicoEmEdicaoId ? 'Editar Serviço' : 'Adicionar ao Menu' }}</h3>
         <div class="space-y-3">
           <input v-model="novoServico.nome" placeholder="Nome (Ex: Unha de Gel)" class="input-modern">
-          <input v-model="novoServico.valor" type="number" placeholder="Valor (Ex: 100.00)" class="input-modern">
+          <div class="grid grid-cols-2 gap-3">
+             <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Valor (R$)</label>
+                <input v-model="novoServico.valor" type="number" placeholder="0.00" class="input-modern">
+             </div>
+             <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Tempo (Min)</label>
+                <input v-model="novoServico.tempoEstimado" type="number" placeholder="60" class="input-modern">
+             </div>
+          </div>
           <button @click="adicionarServicoLista" class="btn-primary">Adicionar</button>
           <button @click="modalServicoOpen = false" class="text-xs font-bold text-gray-400 w-full mt-2">Cancelar</button>
         </div>
@@ -1336,6 +1462,39 @@ async function salvarAgendaBackend() {
                 Enviar Comprovante (WhatsApp)
             </button>
             <button @click="modalSuccessOpen = false" class="text-xs font-bold text-gray-400 mt-2 hover:text-gray-600">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL CANCELAMENTO -->
+    <div v-if="modalCancelamentoOpen" class="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4">
+             <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2 text-red-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+             </div>
+             <h3 class="font-bold text-center text-[#0F172A]">Confirmar Cancelamento</h3>
+             <p class="text-xs text-center text-gray-500">Informe o motivo para avisar a cliente no WhatsApp.</p>
+             
+             <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1 mb-1 block">Motivo</label>
+                <select v-model="motivoCancelamento" class="input-modern bg-gray-50">
+                    <option v-for="opt in opcoesCancelamento" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+                <input v-if="motivoCancelamento === 'Outro'" v-model="motivoCancelamentoExtra" placeholder="Digite o motivo..." class="input-modern mt-2">
+             </div>
+
+             <div class="flex gap-2 pt-2">
+                 <button @click="modalCancelamentoOpen = false" class="btn-secondary">Voltar</button>
+                 <button @click="confirmarCancelamento" class="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold hover:brightness-110 uppercase tracking-wide">Confirmar e Avisar</button>
+             </div>
+        </div>
+    </div>
+
+    <!-- TOAST COMPONENT (GLOBAL) -->
+    <div v-if="toast.show" class="fixed top-4 right-4 z-[9999] animate-fade-in-down">
+        <div :class="['px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border', 
+              toast.tipo === 'erro' ? 'bg-white border-red-100 text-red-500' : 'bg-white border-green-100 text-green-600']">
+            <span class="text-xl">{{ toast.tipo === 'erro' ? '❌' : '✅' }}</span>
+            <p class="font-bold text-sm">{{ toast.message }}</p>
         </div>
     </div>
 

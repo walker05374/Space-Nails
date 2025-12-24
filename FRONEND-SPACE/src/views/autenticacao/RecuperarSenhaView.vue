@@ -30,8 +30,8 @@ async function solicitar() {
 
     <div class="w-full max-w-md bg-white p-8 rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 text-center relative z-10">
       
-      <div class="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm">
-        🔒
+      <div class="mb-2">
+        <img src="/icon.png" alt="Icon" class="w-36 h-36 mx-auto animate-bounce-slow" />
       </div>
 
       <h1 class="text-2xl font-bold text-[#0F172A] mb-2">Recuperar Senha</h1>

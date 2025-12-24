@@ -13,6 +13,7 @@ const erro = ref(null);
 const isSubmitting = ref(false);
 const verificandoConexao = ref(true);
 const bancoOnline = ref(false);
+const mostrarSenha = ref(false);
 
 onMounted(async () => {
   await checarStatusSistema();
@@ -89,6 +90,7 @@ async function fazerLogin() {
     <div class="w-full max-w-md bg-white p-10 rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 relative z-10">
       
       <div class="text-center mb-10">
+        <img src="/icon.png" alt="Icon" class="w-28 h-25 mx-auto animate-bounce-slow" />
         <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">Space<span class="text-[#DB2777]">.Nails</span></h1>
         <p class="text-gray-400 text-sm mt-2 font-medium">Bem-vinda de volta</p>
       </div>
@@ -101,7 +103,17 @@ async function fazerLogin() {
         
         <div>
           <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Senha</label>
-          <input type="password" v-model="password" required :disabled="!bancoOnline" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-[#DB2777] outline-none text-[#0F172A] placeholder-gray-400 transition-all" placeholder="••••••••">
+          <div class="relative">
+              <input :type="mostrarSenha ? 'text' : 'password'" v-model="password" required :disabled="!bancoOnline" class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-[#DB2777] outline-none text-[#0F172A] placeholder-gray-400 transition-all pr-12" placeholder="••••••••">
+              <button type="button" @click="mostrarSenha = !mostrarSenha" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#DB2777] transition-colors bg-transparent border-none cursor-pointer">
+                  <span v-if="mostrarSenha">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                  </span>
+                  <span v-else>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </span>
+              </button>
+          </div>
           
           <div class="text-right mt-2">
             <router-link to="/recuperar-senha" class="text-xs font-bold text-gray-400 hover:text-[#DB2777] transition-colors">

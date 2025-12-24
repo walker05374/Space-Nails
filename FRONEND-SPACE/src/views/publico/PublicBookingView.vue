@@ -5,6 +5,7 @@
 
     <div class="booking-card">
       <div class="header-section">
+        <img src="/icon.png" alt="Logo" class="w-16 h-16 mx-auto mb-2 animate-bounce-slow" />
         <h2 class="title-brand">Space<span class="text-pink">.Nails</span></h2>
         <p class="subtitle" v-if="nomeProfissional">Agendamento com <strong>{{ nomeProfissional }}</strong></p>
         
@@ -323,9 +324,12 @@ async function abrirGaleria(servico) {
 
 async function registrarVisualizacao(foto) {
     // Apenas contabiliza click, pode abrir um lightbox se quiser (por enquanto só track)
-    try {
-        await api.post(`/api/public/portfolio/${foto.id}/click`)
-    } catch(e) {}
+    /* 
+       REMOVIDO: Não contabilizar views no fluxo de agendamento, apenas no Portfolio principal.
+       try {
+           await api.post(`/api/public/portfolio/${foto.id}/click`)
+       } catch(e) {}
+    */
 }
 
 // Estados de Remarcação

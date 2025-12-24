@@ -102,6 +102,9 @@ public class PublicAgendamentoController {
                 .filter(s -> s.getProfissional() != null && s.getProfissional().getId().equals(profissional.getId()))
                 .forEach(s -> mapa.put(s.getNome().trim().toLowerCase(), s));
 
+        // 3. REMOVE INATIVOS (Soft Delete)
+        mapa.values().removeIf(s -> s.getAtivo() != null && !s.getAtivo());
+
         return ResponseEntity.ok(new ArrayList<>(mapa.values()));
     }
 
@@ -117,19 +120,26 @@ public class PublicAgendamentoController {
             throw new RuntimeException("Não é permitido agendar em datas passadas.");
         }
 
-        Servico servico = servicoRepository.findById(servicoId)
+        Servico servicoSelecioando = servicoRepository.findById(servicoId)
                 .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+        int duracaoMinutos = (servicoSelecioando.getTempoEstimado() != null
+                && servicoSelecioando.getTempoEstimado() > 0)
+                        ? servicoSelecioando.getTempoEstimado()
+                        : 60;
 
         Usuario profissional = usuarioRepository.findById(profissionalId)
                 .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
 
-        // BUSCA CONFIGURAÇÃO DE AGENDA PARA O DIA DA SEMANA
-        // 1 = Segunda, 7 = Domingo (ISO-8601 define Monday=1)
-        // AgendaConfig usa 1..7?
-        // LocalDate.getDayOfWeek().getValue() retorna 1 (Mon) a 7 (Sun).
-        int diaSemana = dataConsulta.getDayOfWeek().getValue();
+        // BUSCA AGENDAMENTOS DO DIA PARA VERIFICAR INTERVALOS
+        LocalDateTime inicioDia = dataConsulta.atStartOfDay();
+        LocalDateTime fimDia = dataConsulta.atTime(23, 59, 59);
+        List<Agendamento> agendamentosDoDia = agendamentoRepository.findByProfissionalAndData(profissional, inicioDia,
+                fimDia);
 
-        // Padrão (Fallback): 08:00 - 18:00 sem intervalo
+        // BUSCA CONFIGURAÇÃO DE AGENDA
+        int diaSemana = dataConsulta.getDayOfWeek().getValue(); // 1=Mon, 7=Sun
+
         LocalTime horaInicio = LocalTime.of(8, 0);
         LocalTime horaFim = LocalTime.of(18, 0);
         LocalTime pausaInicio = null;
@@ -141,7 +151,7 @@ public class PublicAgendamentoController {
         if (agendaOpt.isPresent()) {
             com.space.nails.model.AgendaConfig config = agendaOpt.get();
             if (!config.isAtivo()) {
-                diaAtivo = false; // Loja fechada neste dia
+                diaAtivo = false;
             } else {
                 horaInicio = config.getInicioTrabalho() != null ? config.getInicioTrabalho() : horaInicio;
                 horaFim = config.getFimTrabalho() != null ? config.getFimTrabalho() : horaFim;
@@ -151,39 +161,69 @@ public class PublicAgendamentoController {
         }
 
         List<LocalTime> slotsDisponiveis = new ArrayList<>();
-
         if (!diaAtivo) {
-            return ResponseEntity.ok(slotsDisponiveis); // Retorna vazio (Fechado)
+            return ResponseEntity.ok(slotsDisponiveis);
         }
 
-        LocalTime inicio = horaInicio;
+        LocalTime cursor = horaInicio;
 
-        // Loop usando os horários dinâmicos
-        while (inicio.isBefore(horaFim)) {
+        // Loop: Avança de 30 em 30 min (granularidade padrão de visualização)
+        // Mas verifica se o BLOCO Inteiro (cursor -> cursor + duracao) cabe
+        while (cursor.plusMinutes(duracaoMinutos).isBefore(horaFim)
+                || cursor.plusMinutes(duracaoMinutos).equals(horaFim)) {
 
-            // Verifica se cai no intervalo de almoço
-            boolean noAlmoco = false;
+            LocalTime terminoSlot = cursor.plusMinutes(duracaoMinutos);
+            boolean conflito = false;
+
+            // 1. Verifica Pausa (Almoço)
+            // Se o intervalo do serviço [cursor, terminoSlot] encosta ou entra no almoço
+            // [pausaInicio, pausaFim]
             if (pausaInicio != null && pausaFim != null) {
-                // Se o slot começa DENTRO do intervalo OU termina DENTRO (simplificado: Se
-                // começar >= pausaInicio e < pausaFim)
-                if ((inicio.equals(pausaInicio) || inicio.isAfter(pausaInicio)) && inicio.isBefore(pausaFim)) {
-                    noAlmoco = true;
+                // Sobreposição de intervalos: Max(StartA, StartB) < Min(EndA, EndB)
+                // Almoço: A, Serviço: B
+                // if (cursor < pausaFim && terminoSlot > pausaInicio)
+                if (cursor.isBefore(pausaFim) && terminoSlot.isAfter(pausaInicio)) {
+                    conflito = true;
                 }
             }
 
-            if (!noAlmoco) {
-                LocalDateTime dataHoraSlot = LocalDateTime.of(dataConsulta, inicio);
-                boolean isSlotPassado = dataConsulta.isEqual(LocalDate.now()) && inicio.isBefore(LocalTime.now());
+            // 2. Verifica Conflito com Agendamentos Existentes
+            if (!conflito) {
+                LocalDateTime slotInicio = LocalDateTime.of(dataConsulta, cursor);
+                LocalDateTime slotFim = LocalDateTime.of(dataConsulta, terminoSlot);
 
-                if (!isSlotPassado && !agendamentoRepository.existeConflitoHorario(profissional, dataHoraSlot)) {
-                    slotsDisponiveis.add(inicio);
+                // Slot passado?
+                if (dataConsulta.isEqual(LocalDate.now()) && cursor.isBefore(LocalTime.now())) {
+                    conflito = true;
+                } else {
+                    for (Agendamento a : agendamentosDoDia) {
+                        if (a.getStatus() == StatusAgendamento.CANCELADO)
+                            continue; // Ignora cancelados
+
+                        // Calcula Fim do Agendamento Existente
+                        int duracaoA = (a.getServico().getTempoEstimado() != null
+                                && a.getServico().getTempoEstimado() > 0)
+                                        ? a.getServico().getTempoEstimado()
+                                        : 60;
+                        LocalDateTime aInicio = a.getDataHora();
+                        LocalDateTime aFim = aInicio.plusMinutes(duracaoA);
+
+                        // Lógica de Interseção: (StartA < EndB) and (EndA > StartB)
+                        if (aInicio.isBefore(slotFim) && aFim.isAfter(slotInicio)) {
+                            conflito = true;
+                            break;
+                        }
+                    }
                 }
             }
 
-            int tempo = (servico.getTempoEstimado() != null && servico.getTempoEstimado() > 0)
-                    ? servico.getTempoEstimado()
-                    : 60;
-            inicio = inicio.plusMinutes(tempo);
+            if (!conflito) {
+                slotsDisponiveis.add(cursor);
+            }
+
+            // Próximo slot: avança 30 min (padrão de grade) ou flexível?
+            // Geralmente sistemas usam grade fixa (ex: 30min).
+            cursor = cursor.plusMinutes(30);
         }
 
         return ResponseEntity.ok(slotsDisponiveis);
@@ -191,38 +231,51 @@ public class PublicAgendamentoController {
 
     @PostMapping("/agendar")
     public ResponseEntity<Agendamento> agendar(@RequestBody PublicAgendamentoDTO dto) {
-        // Validação de data no backend (Data e Hora)
         if (dto.getDataHora().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Não é permitido agendar em horários passados.");
         }
 
         Servico servico = servicoRepository.findById(dto.getServicoId())
                 .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
-
         Usuario profissional = servico.getProfissional();
 
-        // 1. Busca cliente por telefone
-        // LOGICA CORRIGIDA: Se existe, mantém o nome original. Se não, cria novo.
+        // VALIDAÇÃO DE CONFLITO POR INTERVALO
+        int duracao = (servico.getTempoEstimado() != null && servico.getTempoEstimado() > 0)
+                ? servico.getTempoEstimado()
+                : 60;
+        LocalDateTime novoInicio = dto.getDataHora();
+        LocalDateTime novoFim = novoInicio.plusMinutes(duracao);
+
+        LocalDateTime inicioDia = novoInicio.toLocalDate().atStartOfDay();
+        LocalDateTime fimDia = novoInicio.toLocalDate().atTime(23, 59, 59);
+        List<Agendamento> agendamentosDoDia = agendamentoRepository.findByProfissionalAndData(profissional, inicioDia,
+                fimDia);
+
+        for (Agendamento a : agendamentosDoDia) {
+            if (a.getStatus() == StatusAgendamento.CANCELADO)
+                continue;
+
+            int duraA = (a.getServico().getTempoEstimado() != null) ? a.getServico().getTempoEstimado() : 60;
+            LocalDateTime aInicio = a.getDataHora();
+            LocalDateTime aFim = aInicio.plusMinutes(duraA);
+
+            if (aInicio.isBefore(novoFim) && aFim.isAfter(novoInicio)) {
+                throw new RuntimeException("Horário indisponível (conflito de horário).");
+            }
+        }
+
+        // 1. Busca/Cria Cliente
         Cliente cliente = clienteRepository.findByTelefone(dto.getTelefoneCliente())
                 .orElseGet(() -> {
                     Cliente novo = new Cliente();
-                    novo.setNome(dto.getNomeCliente()); // Só define nome se for NOVO
+                    novo.setNome(dto.getNomeCliente());
                     novo.setTelefone(dto.getTelefoneCliente());
                     novo.setDataCadastro(LocalDate.now());
                     novo.setProfissional(profissional);
-                    novo.setObservacoes("Cliente cadastrado via Auto-Agendamento");
+                    novo.setObservacoes("Cadastrado via Auto-Agendamento");
                     return clienteRepository.save(novo);
                 });
 
-        // Se o cliente já existia, NÃO atualizamos o nome dele.
-        // Preserva o histórico.
-
-        // 2. Verifica conflito novamente (segurança)
-        if (agendamentoRepository.existeConflitoHorario(profissional, dto.getDataHora())) {
-            throw new RuntimeException("Horário não está mais disponível.");
-        }
-
-        // 3. Cria agendamento
         Agendamento agendamento = new Agendamento();
         agendamento.setCliente(cliente);
         agendamento.setProfissional(profissional);
@@ -232,30 +285,26 @@ public class PublicAgendamentoController {
         agendamento.setObservacoes("Agendamento Online");
 
         Agendamento salvo = agendamentoRepository.save(agendamento);
-
-        // CRIA NOTIFICAÇÃO
-        try {
-            // Remove notificações anteriores deste mesmo agendamento (Deduping)
-            notificacaoRepository.deleteByAgendamento(salvo);
-
-            java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
-            String dataFormatada = dto.getDataHora().format(dtf);
-
-            Notificacao notif = new Notificacao(
-                    null,
-                    profissional,
-                    "Novo agendamento: " + cliente.getNome() + " - " + servico.getNome() + " - " + dataFormatada,
-                    null,
-                    LocalDateTime.now(),
-                    false,
-                    "success",
-                    salvo); // Link com Agendamento
-            notificacaoRepository.save(notif);
-        } catch (Exception e) {
-            System.err.println("Erro ao salvar notificação: " + e.getMessage());
-        }
+        this.criarNotificacao(salvo, "Novo agendamento", "success");
 
         return ResponseEntity.ok(salvo);
+    }
+
+    // Método auxiliar para notificação (reduz duplicidade)
+    private void criarNotificacao(Agendamento agendamento, String prefixo, String tipo) {
+        try {
+            notificacaoRepository.deleteByAgendamento(agendamento);
+            java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
+            String dataF = agendamento.getDataHora().format(dtf);
+            String msg = prefixo + ": " + agendamento.getCliente().getNome() + " - "
+                    + agendamento.getServico().getNome() + " - " + dataF;
+
+            Notificacao notif = new Notificacao(null, agendamento.getProfissional(), msg, null, LocalDateTime.now(),
+                    false, tipo, agendamento);
+            notificacaoRepository.save(notif);
+        } catch (Exception e) {
+            System.err.println("Erro notif: " + e.getMessage());
+        }
     }
 
     @GetMapping("/agendamento/{codigo}")
@@ -275,49 +324,46 @@ public class PublicAgendamentoController {
         }
 
         LocalDateTime novaDataHora = LocalDateTime.parse(payload.get("novaDataHora"));
-
         if (novaDataHora.isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Não é permitido agendar em horários passados.");
         }
 
-        // Valida conflito
-        if (agendamentoRepository.existeConflitoHorario(agendamento.getProfissional(), novaDataHora)) {
-            throw new RuntimeException("Novo horário indisponível.");
+        // Valida conflito (ignorando o próprio agendamento atual se for a mesma data,
+        // mas aqui mudou data/hora)
+        // Precisamos checar conflito com OUTROS agendamentos
+        int duracao = (agendamento.getServico().getTempoEstimado() != null)
+                ? agendamento.getServico().getTempoEstimado()
+                : 60;
+        LocalDateTime novoFim = novaDataHora.plusMinutes(duracao);
+
+        LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
+        LocalDateTime fimDia = novaDataHora.toLocalDate().atTime(23, 59, 59);
+        List<Agendamento> agendamentosDoDia = agendamentoRepository
+                .findByProfissionalAndData(agendamento.getProfissional(), inicioDia, fimDia);
+
+        for (Agendamento a : agendamentosDoDia) {
+            if (a.getId().equals(agendamento.getId()))
+                continue; // Ignora a versão antiga dele mesmo no banco
+            if (a.getStatus() == StatusAgendamento.CANCELADO)
+                continue;
+
+            int duraA = (a.getServico().getTempoEstimado() != null) ? a.getServico().getTempoEstimado() : 60;
+            LocalDateTime aInicio = a.getDataHora();
+            LocalDateTime aFim = aInicio.plusMinutes(duraA);
+
+            if (aInicio.isBefore(novoFim) && aFim.isAfter(novaDataHora)) {
+                throw new RuntimeException("Novo horário indisponível.");
+            }
         }
 
         agendamento.setDataHora(novaDataHora);
-        agendamento.setStatus(StatusAgendamento.PENDENTE); // Volta para pendente se estava cancelado? Ou mantém?
-                                                           // Geralmente volta pra pendente.
-
-        // Resetar notificações?? Talvez sim
+        agendamento.setStatus(StatusAgendamento.PENDENTE);
         agendamento.setLembrete24hEnviado(false);
         agendamento.setLembrete2hEnviado(false);
         agendamento.setLembrete30minEnviado(false);
 
         Agendamento salvo = agendamentoRepository.save(agendamento);
-
-        // Formata data bonita
-        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
-        String dataFormatada = novaDataHora.format(dtf);
-
-        // CRIA NOTIFICAÇÃO DE REMARCAÇÃO
-        try {
-            // Remove notificações anteriores deste mesmo agendamento (Deduping)
-            notificacaoRepository.deleteByAgendamento(salvo);
-
-            Notificacao notif = new Notificacao(
-                    null,
-                    agendamento.getProfissional(),
-                    "Agendamento Remarcado: " + agendamento.getCliente().getNome() + " para " + dataFormatada,
-                    null,
-                    LocalDateTime.now(),
-                    false,
-                    "warning",
-                    salvo); // Link com Agendamento
-            notificacaoRepository.save(notif);
-        } catch (Exception e) {
-            System.err.println("Erro ao salvar notificação: " + e.getMessage());
-        }
+        this.criarNotificacao(salvo, "Agendamento Remarcado", "warning");
 
         return ResponseEntity.ok(salvo);
     }

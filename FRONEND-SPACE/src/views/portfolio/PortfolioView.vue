@@ -27,6 +27,55 @@ function fecharFoto() {
     fotoSelecionada.value = null;
 }
 
+// Estados de Edição e Feedback
+const modalEdicaoOpen = ref(false);
+const itemEmEdicao = ref(null);
+const modalFeedbackOpen = ref(false);
+const msgFeedback = ref('');
+const tipoFeedback = ref('sucesso'); // sucesso, erro
+
+// EDITAR
+function abrirModalEdicao(foto) {
+    if (!foto) return;
+    itemEmEdicao.value = { ...foto, servicoId: foto.servico?.id || null };
+    modalEdicaoOpen.value = true;
+}
+
+async function salvarEdicao() {
+    if (!itemEmEdicao.value) return;
+    try {
+        const payload = {
+            titulo: itemEmEdicao.value.titulo,
+            servicoId: itemEmEdicao.value.servicoId
+        };
+        const res = await api.put(`/api/portfolio/${itemEmEdicao.value.id}`, payload);
+        
+        // Atualiza na lista local
+        const idx = fotos.value.findIndex(f => f.id === res.data.id);
+        if (idx !== -1) {
+            fotos.value[idx] = res.data;
+        }
+        
+        closeModals();
+        mostrarFeedback("Item atualizado com sucesso!");
+    } catch(e) {
+        mostrarFeedback("Erro ao atualizar item.", 'erro');
+    }
+}
+
+// FEEDBACK
+function mostrarFeedback(msg, tipo = 'sucesso') {
+    msgFeedback.value = msg;
+    tipoFeedback.value = tipo;
+    modalFeedbackOpen.value = true;
+    setTimeout(() => { modalFeedbackOpen.value = false; }, 3000);
+}
+
+function closeModals() {
+    modalEdicaoOpen.value = false;
+    itemEmEdicao.value = null;
+}
+
 onMounted(() => {
     carregarFotos();
     carregarServicos();
@@ -97,12 +146,13 @@ async function publicarFoto() {
 }
 
 async function excluirFoto(id) {
-    if(!confirm("Tem certeza?")) return;
+    if(!confirm("Tem certeza que deseja excluir esta foto permanentemente?")) return;
     try {
         await api.delete(`/api/portfolio/${id}`);
         fotos.value = fotos.value.filter(f => f.id !== id);
+        mostrarFeedback("Foto excluída com sucesso!", 'sucesso');
     } catch(e) {
-        alert("Erro ao excluir.");
+        mostrarFeedback("Erro ao excluir foto.", 'erro');
     }
 }
 </script>
@@ -113,7 +163,9 @@ async function excluirFoto(id) {
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
            <div>
                <h2 class="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-                   <span>📸</span> Conheça meu Trabalho (Portfólio)
+                   <span>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                   </span> Conheça meu Trabalho (Portfólio)
                </h2>
                <p class="text-gray-500 text-sm mt-1 max-w-xl">
                    Adicione fotos dos seus trabalhos para que os clientes vejam ao agendar. 
@@ -176,7 +228,9 @@ async function excluirFoto(id) {
         <!-- Gallery Grid -->
         <div v-if="carregando" class="text-center py-10 text-gray-400">Carregando fotos...</div>
         <div v-else-if="fotos.length === 0" class="text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-            <span class="text-4xl block mb-2">🖼️</span>
+            <span class="text-4xl block mb-2 text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            </span>
             <p class="text-gray-500 font-medium">Sua galeria está vazia.</p>
             <p class="text-xs text-gray-400">Comece postando sua primeira foto acima!</p>
         </div>
@@ -186,7 +240,9 @@ async function excluirFoto(id) {
                 <div class="aspect-square bg-gray-100 relative overflow-hidden cursor-pointer" @click="abrirFoto(foto)">
                     <img :src="foto.imagemUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Portfolio">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button class="bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-sm transition-colors" title="Ver Fullscreen">👁️</button>
+                        <button class="bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-sm transition-colors" title="Ver Fullscreen">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
                     </div>
                 </div>
                 <div class="p-4">
@@ -196,12 +252,17 @@ async function excluirFoto(id) {
                              {{ servicos.find(s => s.id === foto.servico?.id)?.nome || 'Geral' }}
                          </span>
                          <span class="text-xs font-bold text-gray-400 flex items-center gap-1">
-                             👁️ {{ foto.clicks || 0 }}
+                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> {{ foto.clicks || 0 }}
                          </span>
                     </div>
-                    <button @click="excluirFoto(foto.id)" class="mt-3 w-full py-2 text-xs font-bold text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
-                        Excluir
-                    </button>
+                    <div class="flex gap-2 mt-3">
+                         <button @click.stop="abrirModalEdicao(foto)" class="flex-1 py-2 text-xs font-bold text-blue-500 border border-blue-100 rounded-lg hover:bg-blue-50 transition-colors">
+                            Editar
+                        </button>
+                        <button @click.stop="excluirFoto(foto.id)" class="flex-1 py-2 text-xs font-bold text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
+                            Excluir
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -223,6 +284,37 @@ async function excluirFoto(id) {
                     <p class="text-[10px] text-gray-400 mt-2">Visualizações: {{ fotoSelecionada.clicks || 0 }}</p>
                 </div>
             </div>
+        </div>
+        <!-- MODAL EDIÇÃO -->
+        <div v-if="modalEdicaoOpen" class="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+                <h3 class="font-bold text-[#0F172A] mb-4">Editar Detalhes</h3>
+                <div class="space-y-3">
+                    <input v-model="itemEmEdicao.titulo" placeholder="Título" class="input-modern">
+                    <select v-model="itemEmEdicao.servicoId" class="input-modern">
+                        <option :value="null">Geral (Sem serviço)</option>
+                        <option v-for="s in servicos" :key="s.id" :value="s.id">{{ s.nome }}</option>
+                    </select>
+                    <div class="flex gap-2 pt-2">
+                        <button @click="closeModals" class="btn-secondary">Cancelar</button>
+                        <button @click="salvarEdicao" class="flex-1 py-3 bg-[#DB2777] text-white rounded-xl text-xs font-bold hover:brightness-110 uppercase">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL FEEDBACK (SUCCESS/ERROR) -->
+        <div v-if="modalFeedbackOpen" class="fixed bottom-4 right-4 z-[60] animate-fade-in">
+             <div class="px-6 py-4 rounded-2xl shadow-2xl text-white font-bold text-sm flex items-center gap-3"
+                  :class="tipoFeedback === 'sucesso' ? 'bg-green-500' : 'bg-red-500'">
+                 <span v-if="tipoFeedback === 'sucesso'">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                 </span>
+                 <span v-else>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                 </span>
+                 {{ msgFeedback }}
+             </div>
         </div>
     </div>
 </template>
