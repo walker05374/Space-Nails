@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import PinModal from '@/components/PinModal.vue';
 import AvatarSelectorModal from '@/components/AvatarSelectorModal.vue';
+import { Settings, X } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -108,7 +109,7 @@ function handleAvatarSelect(url) {
       <div class="mt-2 flex items-center justify-center gap-2">
          <span class="text-sm text-gray-500">Gerenciar Perfis</span>
          <button @click="modoGerenciamento = !modoGerenciamento" :class="['w-8 h-8 rounded-full flex items-center justify-center transition-all', modoGerenciamento ? 'bg-brand-primary text-white' : 'bg-gray-200 text-gray-500']">
-            ⚙️
+            <Settings class="w-4 h-4" />
          </button>
       </div>
     </div>
@@ -125,7 +126,7 @@ function handleAvatarSelect(url) {
       </div>
 
       <div v-for="aluno in dependentes" :key="aluno.id" @click="selecionarAluno(aluno)" class="flex flex-col items-center group cursor-pointer relative">
-        <button v-if="modoGerenciamento" @click.stop="iniciarExclusao(aluno)" class="absolute -top-1 -right-1 z-20 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg hover:scale-110">✕</button>
+        <button v-if="modoGerenciamento" @click.stop="iniciarExclusao(aluno)" class="absolute -top-1 -right-1 z-20 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg hover:scale-110"><X class="w-3 h-3" /></button>
 
         <div class="w-28 h-28 rounded-full border-4 border-white shadow-card group-hover:scale-105 group-hover:border-green-400 transition-all overflow-hidden relative bg-gray-100">
            <div v-if="modoGerenciamento" class="absolute inset-0 bg-white/60 z-10"></div> 

@@ -13,17 +13,17 @@
         <!-- Localização Header -->
         <div v-if="enderecoProfissional || localizacaoUrl" class="text-center mb-6 -mt-6 flex flex-col items-center gap-2">
             <a v-if="localizacaoUrl" :href="localizacaoUrl" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-[#DB2777] bg-pink-50 px-3 py-1.5 rounded-full hover:bg-pink-100 transition-colors animate-bounce">
-                📍 Ver Localização no Maps
+                <MapPin class="w-4 h-4" /> Ver Localização no Maps
             </a>
-            <span v-if="enderecoProfissional" class="text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                🏠 {{ enderecoProfissional }}
+            <span v-if="enderecoProfissional" class="text-xs text-gray-500 font-medium bg-gray-50 px-3 py-1 rounded-lg border border-gray-100 flex items-center gap-1">
+                <Home class="w-4 h-4" /> {{ enderecoProfissional }}
             </span>
         </div>
 
          <!-- BOTÃO PORTFÓLIO -->
          <div class="text-center mb-6 mt-4">
-            <button @click="$router.push(`/portfolio/public/${route.params.slug}`)" class="text-sm font-bold text-[#DB2777] bg-pink-50 hover:bg-pink-100 hover:text-pink-700 px-6 py-3 rounded-full transition-all transform hover:scale-105 shadow-sm hover:shadow-md">
-                ✨ Conheça um pouco do meu trabalho
+            <button @click="$router.push(`/portfolio/public/${route.params.slug}`)" class="text-sm font-bold text-[#DB2777] bg-pink-50 hover:bg-pink-100 hover:text-pink-700 px-6 py-3 rounded-full transition-all transform hover:scale-105 shadow-sm hover:shadow-md flex items-center justify-center gap-2 mx-auto">
+                <Sparkles class="w-4 h-4" /> Conheça um pouco do meu trabalho
             </button>
          </div>
       </div>
@@ -36,12 +36,12 @@
          </div>
 
          <div class="grid gap-4">
-             <button @click="iniciarNovoAgendamento" class="btn-primary py-4 text-lg shadow-lg">
-                ✨ Novo Agendamento
+             <button @click="iniciarNovoAgendamento" class="btn-primary py-4 text-lg shadow-lg flex items-center justify-center gap-2">
+                <CalendarPlus class="w-6 h-6" /> Novo Agendamento
              </button>
              
-             <button @click="step = 10" class="btn-secondary py-4 text-xs font-bold uppercase tracking-widest border-dashed">
-                🔄 Remarcar / Gerenciar
+             <button @click="step = 10" class="btn-secondary py-4 text-xs font-bold uppercase tracking-widest border-dashed flex items-center justify-center gap-2">
+                <RefreshCw class="w-4 h-4" /> Remarcar / Gerenciar
              </button>
          </div>
       </div>
@@ -73,8 +73,8 @@
           </div>
 
           <div class="actions">
-              <button @click="iniciarRemarcacao" class="bg-blue-500 text-white w-full py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30">
-                 📅 Escolher Nova Data
+              <button @click="iniciarRemarcacao" class="bg-blue-500 text-white w-full py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+                 <Calendar class="w-5 h-5" /> Escolher Nova Data
               </button>
           </div>
           <button @click="step = 0" class="btn-secondary mt-3 w-full">Voltar</button>
@@ -94,7 +94,7 @@
             <div class="flex flex-col items-start gap-1">
                 <span class="service-name">{{ servico.nome }}</span>
                 <button @click.stop="abrirGaleria(servico)" class="text-[10px] font-bold text-[#DB2777] bg-pink-50 px-2 py-0.5 rounded hover:bg-pink-100 transition-colors flex items-center gap-1">
-                    📷 Ver fotos
+                    <Camera class="w-3 h-3" /> Ver fotos
                 </button>
             </div>
             <span class="service-price">R$ {{ servico.valor }}</span>
@@ -119,7 +119,7 @@
             <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wide">Horários para {{ formatarDataBonita(dataSelecionada) }}</h3>
             
             <div v-if="slots.length === 0" class="no-slots bg-gray-50 rounded-xl border border-dashed border-gray-300">
-               Nenhum horário disponível para esta data. 😔
+               <span class="flex items-center justify-center gap-2">Nenhum horário disponível para esta data. <Frown class="w-4 h-4" /></span>
             </div>
 
             <div v-else class="slots-grid">
@@ -135,7 +135,7 @@
           </div>
       </div>
       <div v-else class="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-          <span class="text-4xl mb-2 block">📅</span>
+          <span class="text-4xl mb-2 flex justify-center text-gray-400"><Calendar class="w-10 h-10" /></span>
           <p class="text-gray-400 font-bold text-sm">Selecione uma data acima para ver os horários.</p>
       </div>
         <div class="actions">
@@ -175,7 +175,7 @@
            <div class="absolute top-0 left-0 w-full h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDIwIDEwIiBmaWxsPSIjZjFmNWY5Ij48Y2lyY2xlIGN4PSIxMCIgY3k9Ii01IiByPSIxMCIvPjwvc3ZnPg==')] bg-repeat-x"></div>
            <div class="absolute bottom-0 left-0 w-full h-2 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMCIgdmlld0JveD0iMCAwIDIwIDIwIiBmaWxsPSIjZjFmNWY5Ij48Y2lyY2xlIGN4PSIxMCIgY3k9IjE1IiByPSIxMCIvPjwvc3ZnPg==')] bg-repeat-x"></div>
 
-           <div class="text-4xl mb-4">✨</div>
+           <div class="text-4xl mb-4 text-pink-500 flex justify-center"><Sparkles class="w-10 h-10" /></div>
            <h2 class="text-2xl font-bold text-[#0F172A] mb-1">{{ modoRemarcacao ? 'Remarcado!' : 'Agendado!' }}</h2>
            <p class="text-gray-500 text-xs mb-6">{{ modoRemarcacao ? 'Seu horário foi alterado com sucesso.' : 'Seu horário foi reservado com sucesso.' }}</p>
 
@@ -227,7 +227,7 @@
                   : `Olá ${nomeProfissional}, acabei de agendar *${servicoSelecionado?.nome}* para dia *${formatarDataBonita(dataSelecionada)}* às *${horaSelecionada}*. Meu código é *${agendamentoEncontrado?.codigo}*. Aguardo confirmação!`}`"
               target="_blank"
               class="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-green-500/30 hover:bg-[#128C7E] transition-all transform hover:scale-105 mb-4 no-underline cursor-pointer">
-              <span class="text-xl">📱</span> Enviar Confirmação via WhatsApp
+              <span class="text-xl flex items-center justify-center"><Smartphone class="w-6 h-6" /></span> Enviar Confirmação via WhatsApp
            </a>
 
            <button @click="novoAgendamento" class="btn-secondary bg-gray-50 border-gray-200">Voltar ao Início</button>
@@ -267,7 +267,7 @@
                 </div>
                 
                 <div v-else-if="fotosGaleria.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
-                    <span class="text-5xl mb-3 grayscale opacity-50">🖼️</span>
+                    <span class="flex justify-center mb-3 grayscale opacity-50"><ImageIcon class="w-12 h-12" /></span>
                     <p class="font-medium text-sm">Nenhuma foto neste portfólio.</p>
                 </div>
                 
@@ -286,6 +286,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { MapPin, Home, Sparkles, CalendarPlus, RefreshCw, Calendar, Camera, Frown, Smartphone, ImageIcon } from 'lucide-vue-next';
 
 const step = ref(0) // Começa no step 0 agora
 const servicos = ref([])

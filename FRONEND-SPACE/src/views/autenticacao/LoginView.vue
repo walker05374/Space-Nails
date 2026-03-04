@@ -27,7 +27,7 @@ async function checarStatusSistema() {
     bancoOnline.value = true;
   } catch (e) {
     bancoOnline.value = false;
-    erro.value = "⚠️ Sem conexão com o servidor.";
+    erro.value = "Sem conexão com o servidor.";
   } finally {
     verificandoConexao.value = false;
   }
@@ -131,6 +131,24 @@ async function fazerLogin() {
           <span v-else>ENTRAR</span>
         </button>
       </form>
+
+      <!-- DICA PARA TESTES -->
+      <div class="mt-6 p-4 bg-blue-50/50 border border-blue-100 rounded-2xl text-xs text-blue-700">
+        <p class="font-bold mb-2 text-center uppercase tracking-wide">Credenciais de Teste</p>
+        <div class="flex justify-between px-2">
+          <div class="text-left">
+            <span class="font-bold text-[#DB2777]">Administrador</span><br/>
+            admin@space.com<br/>
+            <span class="text-gray-500 font-mono">admin123</span>
+          </div>
+          <div class="text-right">
+            <span class="font-bold text-[#DB2777]">Profissional</span><br/>
+            prof@space.com<br/>
+            <span class="text-gray-500 font-mono">123456</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import PortfolioView from '@/views/portfolio/PortfolioView.vue';
+import { Pencil, Trash2, ChevronDown, MapPin, XCircle, CheckCircle } from 'lucide-vue-next';
 
 // --- CONFIGURAÇÃO ---
 const TELEFONE_ADMIN = '5500000000000'; // SEU WHATSAPP AQUI
@@ -84,7 +85,7 @@ function abrirWhatsappComprovante() {
     if (!cliente) return;
     
     // Texto da mensagem
-    const msg = `Olá *${cliente.nome}*! 👋\n\nSeu agendamento está confirmado!\n\n💅 *Serviço:* ${a.nomeServico}\n📅 *Data:* ${dataF}\n⏰ *Horário:* ${horaF}\n\n📍 *Local:* ${auth.user.endereco || 'Endereço não informado'}\n\nObrigado pela preferência! ✨`;
+    const msg = `Olá *${cliente.nome}*!\n\nSeu agendamento está confirmado!\n\n*Serviço:* ${a.nomeServico}\n*Data:* ${dataF}\n*Horário:* ${horaF}\n\n*Local:* ${auth.user.endereco || 'Endereço não informado'}\n\nObrigado pela preferência!`;
     
     const url = `https://wa.me/55${cliente.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -1238,7 +1239,7 @@ async function salvarAgendaBackend() {
 
       <div v-if="abaPrincipal === 'clientes'" class="space-y-4 animate-fade-in">
         <div class="flex gap-2">
-          <input v-model="termoBuscaCliente" placeholder="🔍 Buscar por nome ou telefone..." class="flex-1 input-modern bg-white">
+          <input v-model="termoBuscaCliente" placeholder="Buscar por nome ou telefone..." class="flex-1 input-modern bg-white">
           <select v-model="ordemCliente" class="w-1/3 input-modern bg-white">
             <option value="az">A-Z</option>
             <option value="recentes">Recentes</option>
@@ -1278,8 +1279,8 @@ async function salvarAgendaBackend() {
               <span class="font-bold text-[#0F172A]">{{ servico.nome }}</span>
               <div class="flex items-center gap-4">
                  <span class="font-bold text-[#DB2777]">{{ formatarMoeda(servico.valor) }}</span>
-                 <button @click="abrirModalEditarServico(servico)" class="text-gray-300 hover:text-blue-500 mr-2" title="Editar">✏️</button>
-                 <button @click="removerServico(index, servico.id)" class="text-gray-300 hover:text-red-500" title="Excluir">🗑️</button>
+                 <button @click="abrirModalEditarServico(servico)" class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors mr-1" title="Editar"><Pencil class="w-4 h-4" /></button>
+                 <button @click="removerServico(index, servico.id)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir"><Trash2 class="w-4 h-4" /></button>
               </div>
            </div>
         </div>
@@ -1320,7 +1321,7 @@ async function salvarAgendaBackend() {
                  <input type="time" v-model="novoAgendamento.hora" class="input-modern">
             </div>
           </div>
-          <p v-if="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" class="text-[10px] text-pink-500 font-bold ml-1">Selecione um horário abaixo 👇</p>
+          <p v-if="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" class="text-[10px] text-pink-500 font-bold ml-1 flex items-center gap-1">Selecione um horário abaixo <ChevronDown class="w-3 h-3" /></p>
 
           <!-- Seleção de Slots -->
           <div v-if="novoAgendamento.servicoSelecionado !== 'custom' && novoAgendamento.data" class="bg-gray-50 p-3 rounded-xl border border-gray-100 animate-fade-in">
@@ -1394,7 +1395,7 @@ async function salvarAgendaBackend() {
             <p class="text-xs text-gray-400 text-center mb-6">Defina seus horários e a localização do seu estabelecimento.</p>
 
             <div class="bg-blue-50 p-4 rounded-xl mb-6 border border-blue-100">
-                <h4 class="text-xs font-bold text-blue-700 uppercase mb-2">📍 Localização do Studio</h4>
+                <h4 class="text-xs font-bold text-blue-700 uppercase mb-2 flex items-center gap-1"><MapPin class="w-4 h-4" /> Localização do Studio</h4>
                 <div class="space-y-3">
                     <input v-model="configLocalizacao.endereco" placeholder="Endereço (Ex: Rua das Flores, 123)" class="input-modern bg-white border-blue-200">
                     <input v-model="configLocalizacao.localizacaoUrl" placeholder="Link do Google Maps (Opcional)" class="input-modern bg-white border-blue-200">
@@ -1493,7 +1494,10 @@ async function salvarAgendaBackend() {
     <div v-if="toast.show" class="fixed top-4 right-4 z-[9999] animate-fade-in-down">
         <div :class="['px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border', 
               toast.tipo === 'erro' ? 'bg-white border-red-100 text-red-500' : 'bg-white border-green-100 text-green-600']">
-            <span class="text-xl">{{ toast.tipo === 'erro' ? '❌' : '✅' }}</span>
+            <span class="text-xl flex items-center justify-center">
+                <XCircle v-if="toast.tipo === 'erro'" class="w-6 h-6" />
+                <CheckCircle v-else class="w-6 h-6" />
+            </span>
             <p class="font-bold text-sm">{{ toast.message }}</p>
         </div>
     </div>

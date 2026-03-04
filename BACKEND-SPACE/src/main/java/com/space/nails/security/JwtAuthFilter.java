@@ -24,9 +24,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService; // ✅ CORREÇÃO: Removido @Autowired
+    private final UserDetailsService userDetailsService; // CORREÇÃO: Removido @Autowired
 
-    // ✅ CORREÇÃO: Construtor único para injetar todas as dependências
+    // CORREÇÃO: Construtor único para injetar todas as dependências
     public JwtAuthFilter(JwtService jwtService, UserDetailsService userDetailsService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;

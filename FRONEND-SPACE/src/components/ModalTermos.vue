@@ -1,4 +1,5 @@
 <script setup>
+import { AlertTriangle, ScrollText } from 'lucide-vue-next';
 defineProps({
   titulo: String,
   conteudo: String,
@@ -12,9 +13,10 @@ defineEmits(['close', 'confirm']);
     <div class="bg-white rounded-[40px] p-8 w-full max-w-lg shadow-[0_20px_60px_-15px_rgba(167,139,250,0.3)] border-4 border-white transform transition-all scale-100 flex flex-col max-h-[90vh] relative">
       
       <div class="text-center mb-6">
-        <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3 mx-auto shadow-sm"
+        <div class="w-16 h-16 rounded-full flex items-center justify-center mb-3 mx-auto shadow-sm"
              :class="tipo === 'perigo' ? 'bg-red-50 text-red-400' : 'bg-[#F3E8FF] text-[#A78BFA]'">
-          {{ tipo === 'perigo' ? '⚠️' : '📜' }}
+          <AlertTriangle v-if="tipo === 'perigo'" class="w-8 h-8" />
+          <ScrollText v-else class="w-8 h-8" />
         </div>
         <h2 class="text-2xl font-black" :class="tipo === 'perigo' ? 'text-red-400' : 'text-[#A78BFA]'">{{ titulo }}</h2>
       </div>

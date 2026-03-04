@@ -1,5 +1,4 @@
 <script setup>
-import { RouterView } from 'vue-router'
 import { useAccessibilityStore } from '@/stores/accessibility';
 import { onMounted, ref } from 'vue';
 

@@ -16,16 +16,20 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5858,
+    strictPort: true, // Garante que o Vite use apenas esta porta (não tenta a 5859, 5860, etc)
+    host: true, // Necesário para o cloudflared conseguir acessar
+    allowedHosts: ['space.walkerteste.site'], // Permite acesso via túnel Cloudflare
     proxy: {
       '/uploads': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:5555',
         changeOrigin: true,
       },
-      // Opcional: Proxy também para API se quiser remover localhost:8080 do axios no futuro
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:5555',
         changeOrigin: true
       }
     }
   }
 })
+

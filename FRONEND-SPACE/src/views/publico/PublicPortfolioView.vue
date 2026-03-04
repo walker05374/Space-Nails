@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { Camera } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
 import api from '@/services/api';
 
@@ -93,7 +94,7 @@ function fecharFoto() {
             </div>
 
             <div v-else-if="fotos.length === 0" class="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
-                <span class="text-4xl block mb-2 opacity-50">📷</span>
+                <span class="text-4xl block mb-2 opacity-50 flex justify-center"><Camera class="w-10 h-10 text-gray-400" /></span>
                 <p class="text-gray-500 font-medium">Nenhuma foto publicada ainda.</p>
             </div>
 

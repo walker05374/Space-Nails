@@ -1,15 +1,24 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
 
 export const useAuthStore = defineStore('auth', () => {
-    const router = useRouter();
+
+    // Funções seguras para JSON
+    const getSafeJSON = (key) => {
+        try {
+            const data = localStorage.getItem(key);
+            return data && data !== 'undefined' ? JSON.parse(data) : null;
+        } catch (e) {
+            localStorage.removeItem(key);
+            return null;
+        }
+    };
 
     // Estado
-    const user = ref(JSON.parse(localStorage.getItem('user')) || null);
+    const user = ref(getSafeJSON('user'));
     const token = ref(localStorage.getItem('token') || null);
-    const criancaSelecionada = ref(JSON.parse(localStorage.getItem('crianca')) || null);
+    const criancaSelecionada = ref(getSafeJSON('crianca'));
 
     // Getters
     const isAuthenticated = computed(() => !!token.value);
@@ -53,8 +62,9 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) { console.error("Erro ao notificar offline", e); }
 
         clearLoginData();
-        // Redireciona via router para não recarregar a página inteira bruscamente
-        router.push('/login');
+        // Recarrega a página ou redireciona hard se necessário, 
+        // ou deixa que o componente cuide de roteamento
+        window.location.href = '/login';
     }
 
     // Inicialização: Se tiver token salvo, já injeta no Axios

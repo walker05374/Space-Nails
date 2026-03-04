@@ -39,7 +39,7 @@ public class NotificacaoWhatsappService {
         );
         
         for (Agendamento a : lista24h) {
-            enviarMensagem(a, "Lembrete: Seu horário é amanhã! 💅");
+            enviarMensagem(a, "Lembrete: Seu horário é amanhã!");
             a.setLembrete24hEnviado(true);
             agendamentoRepository.save(a);
         }
@@ -53,7 +53,7 @@ public class NotificacaoWhatsappService {
         );
         
         for (Agendamento a : lista2h) {
-            enviarMensagem(a, "Seu horário é daqui a 2 horas! Não se atrase. ⏰");
+            enviarMensagem(a, "Seu horário é daqui a 2 horas! Não se atrase.");
             a.setLembrete2hEnviado(true);
             agendamentoRepository.save(a);
         }
@@ -67,7 +67,7 @@ public class NotificacaoWhatsappService {
         );
         
         for (Agendamento a : lista30min) {
-            enviarMensagem(a, "Seu horário começa em 30 minutos! Estamos te esperando. 🏃‍♀️");
+            enviarMensagem(a, "Seu horário começa em 30 minutos! Estamos te esperando.");
             a.setLembrete30minEnviado(true);
             agendamentoRepository.save(a);
         }
@@ -84,7 +84,7 @@ public class NotificacaoWhatsappService {
         String local = a.getLocalizacao() != null ? a.getLocalizacao() : "No nosso espaço.";
         
         String mensagemCompleta = String.format(
-            "Olá %s! ✨\n%s\n\nServiço: %s\nHorário: %s\nLocal: %s",
+            "Olá %s!\n%s\n\nServiço: %s\nHorário: %s\nLocal: %s",
             a.getCliente().getNome(),
             mensagemAviso,
             a.getServico().getNome(),

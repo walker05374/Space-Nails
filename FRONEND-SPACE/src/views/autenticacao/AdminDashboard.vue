@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
+import { ShieldCheck, Download, Save, Pencil, Trash2, AlertTriangle } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const usuarios = ref([]);
@@ -132,7 +133,7 @@ async function cadastrarUsuario() {
 
 async function excluirUsuario(usuario) {
   if (usuario.role === 'ADMIN') {
-    return alert("⚠️ Segurança: Não é possível excluir um Administrador.");
+    return alert("Aviso de Segurança: Não é possível excluir um Administrador.");
   }
   if (!confirm(`Tem certeza que deseja excluir o acesso de ${usuario.nome}?`)) return;
   try {
@@ -252,7 +253,7 @@ async function processarRestore(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!confirm("⚠️ ATENÇÃO: Isso irá APAGAR TODOS os dados atuais e restaurar os do backup. Deseja continuar?")) {
+    if (!confirm("ATENÇÃO: Isso irá APAGAR TODOS os dados atuais e restaurar os do backup. Deseja continuar?")) {
         e.target.value = ''; // Limpa
         return;
     }
@@ -321,7 +322,7 @@ async function processarRestore(e) {
 
         <div class="flex items-center gap-4">
             <div v-if="alertaBackup" class="hidden md:flex items-center gap-2 bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-lg border border-yellow-200 animate-pulse" title="Faça um backup urgente!">
-                <span class="text-xs font-bold">⚠️ Backup Pendente ({{ diasDesdeBackup }} dias)</span>
+                <span class="text-xs font-bold flex items-center gap-1"><AlertTriangle class="w-3 h-3" /> Backup Pendente ({{ diasDesdeBackup }} dias)</span>
             </div>
             <button @click="authStore.logout" class="text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors">SAIR</button>
         </div>
@@ -422,12 +423,12 @@ async function processarRestore(e) {
 
                 <td class="p-4 text-right">
                   <div class="flex gap-2 justify-end">
-                    <button @click="abrirEdicao(user)" class="p-2 bg-gray-100 rounded-lg text-gray-600 hover:text-[#DB2777] transition-colors" title="Editar">✏️</button>
+                    <button @click="abrirEdicao(user)" class="p-2 bg-gray-100 rounded-lg text-gray-600 hover:text-[#DB2777] transition-colors" title="Editar"><Pencil class="w-4 h-4" /></button>
                     <button 
                       v-if="user.role !== 'ADMIN'"
                       @click="excluirUsuario(user)" 
                       class="p-2 bg-red-50 rounded-lg text-red-500 hover:bg-red-100 transition-colors" title="Excluir"
-                    >🗑️</button>
+                    ><Trash2 class="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
@@ -444,7 +445,7 @@ async function processarRestore(e) {
           <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
                   <h3 class="text-xl font-bold flex items-center gap-2">
-                    🛡️ Segurança do Sistema
+                    <ShieldCheck class="w-6 h-6 text-green-400" /> Segurança do Sistema
                     <span v-if="alertaBackup" class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">Backup Pendente</span>
                   </h3>
                   <p class="text-slate-400 text-sm mt-1 max-w-xl">
@@ -457,12 +458,12 @@ async function processarRestore(e) {
               <div class="flex gap-4">
                   <input type="file" ref="backupInput" class="hidden" accept=".sql" @change="processarRestore">
                   
-                  <button @click="triggerRestore" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-colors text-gray-300 border border-slate-600 hover:border-slate-500">
-                     📥 Restaurar Dados
+                  <button @click="triggerRestore" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-colors text-gray-300 border border-slate-600 hover:border-slate-500 flex items-center gap-2">
+                     <Download class="w-4 h-4" /> Restaurar Dados
                   </button>
 
                   <button @click="fazerBackup" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 hover:scale-105 flex items-center gap-2">
-                     💾 Fazer Backup Agora
+                     <Save class="w-4 h-4" /> Fazer Backup Agora
                   </button>
               </div>
           </div>

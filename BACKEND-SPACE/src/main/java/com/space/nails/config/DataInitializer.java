@@ -29,14 +29,14 @@ public class DataInitializer {
                         .ativo(true)
                         .build();
                 Usuario adminSaved = usuarioRepository.save(admin);
-                System.out.println("✅ Admin criado: admin@space.com / admin123");
+                System.out.println("[INFO] Admin criado: admin@space.com / admin123");
 
                 // --- CRIAR SERVIÇOS PADRÃO (TEMPLATES) ---
                 // Vinculados ao Admin, servirão de base para novos profissionais
                 if (servicoRepository.findByProfissional(adminSaved).isEmpty()) {
                     servicoRepository.save(new Servico(null, "Manicure", 35.00, 40, adminSaved));
                     servicoRepository.save(new Servico(null, "Pedicure", 40.00, 40, adminSaved));
-                    System.out.println("✅ Serviços Padrão (Admin) criados!");
+                    System.out.println("[INFO] Serviços Padrão (Admin) criados!");
                 }
             }
 
@@ -55,7 +55,7 @@ public class DataInitializer {
                 // Cria serviços iniciais para este profissional
                 servicoRepository.save(new Servico(null, "Manicure", 35.00, 40, prof));
                 servicoRepository.save(new Servico(null, "Pedicure", 40.00, 40, prof));
-                System.out.println("✅ Profissional e Serviços criados!");
+                System.out.println("[INFO] Profissional e Serviços criados!");
             }
         };
     }

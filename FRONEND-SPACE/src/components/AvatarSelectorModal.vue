@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue';
+import { Palette, X } from 'lucide-vue-next';
 
 const emit = defineEmits(['close', 'select']);
 
@@ -25,11 +26,11 @@ function selecionar(url) {
     <div class="bg-white rounded-[40px] p-8 w-full max-w-md shadow-2xl border-4 border-white flex flex-col max-h-[80vh] relative">
       
       <!-- Botão Fechar -->
-      <button @click="$emit('close')" class="absolute top-5 right-5 text-gray-300 hover:text-[#A78BFA] transition-colors font-bold text-xl">✕</button>
+      <button @click="$emit('close')" class="absolute top-5 right-5 text-gray-300 hover:text-[#A78BFA] transition-colors font-bold"><X class="w-6 h-6" /></button>
 
       <div class="text-center mb-6">
         <h2 class="text-2xl font-black text-[#A78BFA] mb-1">Escolha seu Avatar</h2>
-        <p class="text-gray-400 font-bold text-sm">Como você quer ser hoje? 🎨</p>
+        <p class="text-gray-400 font-bold text-sm flex items-center justify-center gap-1">Como você quer ser hoje? <Palette class="w-4 h-4 text-[#A78BFA] ml-1" /></p>
       </div>
 
       <div class="grid grid-cols-3 gap-4 overflow-y-auto p-2 scrollbar-hide">
