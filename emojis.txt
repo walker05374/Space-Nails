@@ -1,8 +1,0 @@
-FRONEND-SPACE\src\components\AvatarSelectorModal.vue => 🎨
-FRONEND-SPACE\src\components\ModalTermos.vue => 📜
-FRONEND-SPACE\src\views\autenticacao\AdminDashboard.vue => 📥 💾
-FRONEND-SPACE\src\views\inicio\HomeView.vue => 👋 💅 📅 ⏰ 📍 ✨ 🔍 👇 ❌ ✅
-FRONEND-SPACE\src\views\publico\PublicBookingView.vue => 📍 🏠 ✨ 🔄 📅 📷 😔 📱
-FRONEND-SPACE\src\views\publico\PublicPortfolioView.vue => 📷
-BACKEND-SPACE\src\main\java\com\space\nails\security\JwtAuthFilter.java => ✅
-BACKEND-SPACE\src\main\java\com\space\nails\service\NotificacaoWhatsappService.java => 💅 ⏰ 🏃 ✨

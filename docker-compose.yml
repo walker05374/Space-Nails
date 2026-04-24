@@ -25,7 +25,7 @@ services:
     container_name: cantinho_frontend
     image: cantinho_frontend:latest
     build:
-      context: ./FRONEND-SPACE
+      context: ./FRONTEND-SPACE
       dockerfile: Dockerfile
       args:
         # IMPORTANTE: Definir como "/" faz o axios usar o mesmo domínio do site.
